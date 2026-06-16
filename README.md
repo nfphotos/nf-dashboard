@@ -70,7 +70,6 @@ and location (default Malta — weather + golden hour come from free Open-Meteo,
 Edit the JSON in **`data/`** to seed content:
 - `photography.json` — upcoming shoots + a gallery (drop in your own image URLs)
 - `social.json` — follower counts + top posts
-- `finances.json` — subscriptions, income, expenses
 - `tasks.json` — starter to-do list (after that, tasks are edited on the phone)
 
 ---

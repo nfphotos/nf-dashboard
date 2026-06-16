@@ -5,7 +5,6 @@
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const fmt = new Intl.NumberFormat("en-GB");
-const money = n => "€" + fmt.format(Math.round(n));
 
 async function loadJSON(path, fallback) {
   try { const r = await fetch(path + "?t=" + Date.now()); if (!r.ok) throw 0; return await r.json(); }
@@ -128,6 +127,15 @@ function renderCalendar(c) {
   const n = items[0];
   $("#ov-next-shoot .big-line").textContent = n.title;
   $("#ov-next-shoot small").innerHTML = `${fmtEventDate(n.start, n.allDay).replace("<br>", " · ")}${n.location ? " · " + n.location : ""}`;
+
+  const after = items[1];
+  if (after) {
+    $("#ov-next2 .big-line").textContent = after.title;
+    $("#ov-next2 small").innerHTML = `${fmtEventDate(after.start, after.allDay).replace("<br>", " · ")}${after.location ? " · " + after.location : ""}`;
+  } else {
+    $("#ov-next2 .big-line").textContent = "—";
+    $("#ov-next2 small").textContent = "nothing else scheduled";
+  }
 }
 
 /* ---------- Photography (gallery only — fixtures come from calendar) ---------- */
@@ -156,36 +164,6 @@ function renderSocial(s) {
       <span class="right">${fmt.format(p.metricValue)} ${p.metric}</span></li>`).join("");
   }
 }
-
-/* ---------- Finances ---------- */
-function renderMoney(f) {
-  if (!f) return;
-  const subs = f.subscriptions || [];
-  const monthly = subs.reduce((t, s) => t + (s.cycle === "yearly" ? s.amount / 12 : s.amount), 0);
-  $("#m-subs-total").textContent = money(monthly);
-  $("#m-subs-count").textContent = subs.length + " active";
-  const income = (f.income || []).reduce((t, x) => t + x.amount, 0);
-  const expense = (f.expenses || []).reduce((t, x) => t + x.amount, 0) + monthly;
-  $("#m-in").textContent = money(income);
-  $("#m-out").textContent = money(expense);
-  const net = income - expense;
-  const netEl = $("#m-net"); netEl.textContent = (net < 0 ? "-" : "") + money(Math.abs(net));
-  netEl.className = "big " + (net >= 0 ? "pos" : "neg");
-
-  // sort subs by next renewal
-  const sorted = [...subs].sort((a, b) => (a.nextRenewal || "").localeCompare(b.nextRenewal || ""));
-  $("#m-subs").innerHTML = sorted.map(s => {
-    const soon = daysUntil(s.nextRenewal) <= 7;
-    return `<li><span><span class="lead">${s.name}</span><br>
-      <span class="sub">${s.cycle}${soon ? " · renews soon" : ""}</span></span>
-      <span class="right" style="${soon ? 'color:var(--accent-2)' : ''}">${money(s.amount)}<br>${s.nextRenewal || ""}</span></li>`;
-  }).join("");
-  if (sorted[0]) {
-    $("#ov-renewal .big-line").textContent = sorted[0].name;
-    $("#ov-renewal small").textContent = `${money(sorted[0].amount)} · ${sorted[0].nextRenewal}`;
-  }
-}
-function daysUntil(d){ if(!d) return 999; return Math.ceil((new Date(d)-new Date())/864e5); }
 
 /* ---------- Tasks (local, persists on device) ---------- */
 const TKEY = "nf-tasks-v1";
@@ -224,15 +202,14 @@ async function seedTasks() {
 /* ---------- Boot ---------- */
 async function boot() {
   setDate(); loadWeather(); seedTasks();
-  const [g, p, s, f, cal, meta] = await Promise.all([
+  const [g, p, s, cal, meta] = await Promise.all([
     loadJSON("data/garmin.json", null),
     loadJSON("data/photography.json", null),
     loadJSON("data/social.json", null),
-    loadJSON("data/finances.json", null),
     loadJSON("data/calendar.json", null),
     loadJSON("data/meta.json", null),
   ]);
-  renderGarmin(g); renderPhoto(p); renderSocial(s); renderMoney(f); renderCalendar(cal);
+  renderGarmin(g); renderPhoto(p); renderSocial(s); renderCalendar(cal);
   if (meta?.lastSync) $("#last-sync").textContent = "Last sync: " +
     new Date(meta.lastSync).toLocaleString("en-GB", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
 }
