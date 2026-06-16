@@ -149,25 +149,6 @@ function renderPhoto(p) {
   }
 }
 
-/* ---------- Social ---------- */
-function renderSocial(s) {
-  if (!s?.accounts?.length) return;
-  $("#s-cards").innerHTML = s.accounts.map(a => {
-    const d = a.followerDelta ?? 0;
-    const arrow = d > 0 ? `<span class="delta up">▲ ${fmt.format(d)}</span>` :
-                  d < 0 ? `<span class="delta down">▼ ${fmt.format(Math.abs(d))}</span>` : "";
-    return `<article class="card stat">
-      <h3>${a.network}</h3>
-      <div class="big">${fmt.format(a.followers)}</div>
-      <small>followers ${arrow}</small></article>`;
-  }).join("");
-  if (s.topPosts?.length) {
-    $("#s-top").innerHTML = s.topPosts.map(p => `
-      <li><span><span class="lead">${p.title}</span><br><span class="sub">${p.network}</span></span>
-      <span class="right">${fmt.format(p.metricValue)} ${p.metric}</span></li>`).join("");
-  }
-}
-
 /* ---------- Tasks (local, persists on device) ---------- */
 const TKEY = "nf-tasks-v1";
 function loadTasks(){ try{ return JSON.parse(localStorage.getItem(TKEY))||[] }catch{ return [] } }
@@ -203,7 +184,7 @@ async function seedTasks() {
 }
 
 /* =====================================================================
-   ENGINE: streaks · briefing · social cadence · content pipeline · gear
+   ENGINE: streaks · briefing · progress · editable gear
    ===================================================================== */
 function dayStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -221,10 +202,12 @@ const loadH = () => { try { return JSON.parse(localStorage.getItem(HKEY)) || {} 
 const saveH = h => localStorage.setItem(HKEY, JSON.stringify(h));
 const habitDoneToday = id => loadH()[id]?.last === dayStr();
 function toggleHabit(id) {
-  const h = loadH(); const cur = h[id] || { last: null, streak: 0 }; const today = dayStr();
-  if (cur.last === today) { cur.streak = Math.max(0, cur.streak - 1); cur.last = null; }
-  else { const y = dayStr(new Date(Date.now() - 864e5)); cur.streak = (cur.last === y ? cur.streak + 1 : 1); cur.last = today; }
-  h[id] = cur; saveH(h); renderStreaks(); renderBriefing(); syncDoneBtn();
+  const h = loadH(); const cur = h[id] || { last: null, streak: 0, best: 0, log: {} };
+  cur.log = cur.log || {}; const today = dayStr();
+  if (cur.last === today) { cur.streak = Math.max(0, cur.streak - 1); cur.last = null; delete cur.log[today]; }
+  else { const y = dayStr(new Date(Date.now() - 864e5)); cur.streak = (cur.last === y ? cur.streak + 1 : 1); cur.last = today; cur.log[today] = true; }
+  cur.best = Math.max(cur.best || 0, cur.streak);
+  h[id] = cur; saveH(h); renderStreaks(); renderBriefing(); syncDoneBtn(); renderProgress();
 }
 const markHabitDone = id => { if (!habitDoneToday(id)) toggleHabit(id); };
 function renderStreaks() {
@@ -264,83 +247,107 @@ function syncDoneBtn() {
 }
 $("#f-done-btn").addEventListener("click", () => markHabitDone("move"));
 
-/* ---- Social: growth goal + weekly cadence ---- */
-function renderSocialGoal(s) {
-  const biz = s?.accounts?.find(a => /photo/i.test(a.network));
-  const cur = biz?.followers ?? CONFIG.social.currentFollowers;
-  const goal = CONFIG.social.followerGoal;
-  const pct = Math.min(100, Math.round(cur / goal * 100));
-  $("#s-goal-fill").style.width = pct + "%";
-  $("#s-goal-text").textContent = `${fmt.format(cur)} / ${fmt.format(goal)} followers · ${pct}%`;
-  $("#s-goal-handle").textContent = CONFIG.socials.instagramBusiness;
+/* =====================================================================
+   GOALS & PROGRESS — bodyweight trend, lift PRs, streak history
+   ===================================================================== */
+function renderProgress() {
+  renderBW(); renderPR(); renderProgressStreaks();
 }
-const wpKey = () => "nf-posts-" + weekKey();
-const weekPosts = () => +(localStorage.getItem(wpKey()) || 0);
-const setWeekPosts = n => localStorage.setItem(wpKey(), Math.max(0, n));
-function renderCadence() {
-  const target = CONFIG.social.weeklyPostTarget, done = weekPosts(), total = Math.max(target, done);
-  let html = "";
-  for (let i = 0; i < total; i++) html += `<button class="dot ${i < done ? "on" : ""} ${i >= target ? "extra" : ""}" data-i="${i}"></button>`;
-  $("#s-cadence").innerHTML = html + `<span class="cadence-text">${done}/${target} this week</span>`;
+
+/* ---- Bodyweight ---- */
+const BW_KEY = "nf-bw-v1";
+const loadBW = () => { try { return JSON.parse(localStorage.getItem(BW_KEY)) || [] } catch { return [] } };
+const saveBW = a => localStorage.setItem(BW_KEY, JSON.stringify(a));
+function renderBW() {
+  if (!$("#bw-current")) return;
+  const arr = loadBW().slice().sort((a, b) => a.date < b.date ? 1 : -1);  // newest first
+  const cur = arr[0]?.kg ?? CONFIG.goals.bodyweightKg;
+  const target = CONFIG.goals.bodyweightTargetKg;
+  const togo = +(cur - target).toFixed(1);
+  $("#bw-current").textContent = cur + "kg";
+  $("#bw-target").textContent = "target " + target + "kg";
+  const tg = $("#bw-togo");
+  tg.textContent = togo === 0 ? "on target 🎯" : `${Math.abs(togo)}kg to ${togo > 0 ? "lose" : "gain"}`;
+  tg.className = "pill " + (Math.abs(togo) <= 1 ? "good" : "");
+  $("#bw-log").innerHTML = arr.length ? arr.slice(0, 7).map((e, i) => {
+    const prev = arr[i + 1];
+    const diff = prev ? +(e.kg - prev.kg).toFixed(1) : null;
+    const d = diff == null ? "" : `<span class="${diff <= 0 ? "pos" : "neg"}">${diff > 0 ? "+" : ""}${diff}</span>`;
+    return `<li><span class="lead">${e.kg}kg ${d}</span>
+      <span class="right">${new Date(e.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span></li>`;
+  }).join("") : '<li class="muted">No entries yet — log your weight above.</li>';
 }
-$("#s-cadence").addEventListener("click", e => {
-  const d = e.target.closest("[data-i]"); if (!d) return;
-  const i = +d.dataset.i, cur = weekPosts(), next = (cur === i + 1) ? i : i + 1;
-  if (next > cur) markHabitDone("post");
-  setWeekPosts(next); renderCadence(); renderStreaks(); renderBriefing();
+$("#bw-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = parseFloat($("#bw-input").value); if (!v) return;
+  const arr = loadBW().filter(x => x.date !== dayStr());  // one entry per day
+  arr.push({ date: dayStr(), kg: v }); saveBW(arr);
+  $("#bw-input").value = ""; renderBW();
 });
 
-/* ---- Content pipeline ---- */
-const PIPE_KEY = "nf-pipe-v1";
-const STAGES = ["Idea", "Shot", "Edit", "Posted"];
-const loadPipe = () => { try { return JSON.parse(localStorage.getItem(PIPE_KEY)) } catch { return null } };
-const savePipe = p => localStorage.setItem(PIPE_KEY, JSON.stringify(p));
-function seedPipe() {
-  if (loadPipe()) return;
-  savePipe([
-    { id: Date.now(), text: "Birkirkara friendly — match reel", stage: 0 },
-    { id: Date.now() + 1, text: "Behind-the-scenes carousel", stage: 1 }
-  ]);
+/* ---- Lift PRs ---- */
+const PR_KEY = "nf-pr-v1";
+const loadPR = () => { try { return JSON.parse(localStorage.getItem(PR_KEY)) || [] } catch { return [] } };
+const savePR = a => localStorage.setItem(PR_KEY, JSON.stringify(a));
+function renderPR() {
+  if (!$("#pr-list")) return;
+  const arr = loadPR();
+  $("#pr-list").innerHTML = arr.length ? arr.map(p =>
+    `<li data-id="${p.id}"><span class="lead">${p.text}</span>
+     <button class="del" data-del="${p.id}">✕</button></li>`).join("")
+    : '<li class="muted">Add your key lifts, e.g. "Back squat 100kg".</li>';
 }
-function renderPipeline() {
-  const p = loadPipe() || [];
-  $("#pipeline").innerHTML = p.length ? p.map(c => `
-    <div class="pipe-card stage-${c.stage}" data-id="${c.id}">
-      <span class="pipe-text">${c.text}</span>
-      <span class="pipe-stage">${STAGES[c.stage]}</span>
-      <button class="pipe-del" data-del="${c.id}">✕</button>
-    </div>`).join("") : '<p class="muted">No ideas yet. Add one above.</p>';
+$("#pr-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("#pr-input").value.trim(); if (!v) return;
+  const arr = loadPR(); arr.push({ id: Date.now(), text: v }); savePR(arr);
+  $("#pr-input").value = ""; renderPR();
+});
+$("#pr-list").addEventListener("click", e => {
+  const del = e.target.closest("[data-del]"); if (!del) return;
+  savePR(loadPR().filter(p => p.id != del.dataset.del)); renderPR();
+});
+
+/* ---- Streak history / this week ---- */
+function renderProgressStreaks() {
+  if (!$("#progress-streaks")) return;
+  const h = loadH();
+  $("#progress-streaks").innerHTML = (CONFIG.habits || []).map(hb => {
+    const s = h[hb.id] || { streak: 0, best: 0, log: {} };
+    const wk = Object.keys(s.log || {}).filter(d => weekKey(new Date(d)) === weekKey()).length;
+    return `<div class="prog-row">
+      <span>${hb.icon} ${hb.label}</span>
+      <span class="right">${s.streak || 0}🔥 · best ${s.best || 0} · ${wk}/7 wk</span></div>`;
+  }).join("");
 }
-$("#pipe-form").addEventListener("submit", e => {
-  e.preventDefault(); const v = $("#pipe-input").value.trim(); if (!v) return;
-  const p = loadPipe() || []; p.unshift({ id: Date.now(), text: v, stage: 0 }); savePipe(p);
-  $("#pipe-input").value = ""; renderPipeline();
-});
-$("#pipeline").addEventListener("click", e => {
-  let p = loadPipe() || [];
-  const del = e.target.closest("[data-del]");
-  if (del) { savePipe(p.filter(c => c.id != del.dataset.del)); return renderPipeline(); }
-  const card = e.target.closest("[data-id]"); if (!card) return;
-  const c = p.find(x => x.id == card.dataset.id); if (!c || c.stage >= 3) return;
-  c.stage++;
-  if (c.stage === 3) { markHabitDone("post"); setWeekPosts(weekPosts() + 1); renderCadence(); renderStreaks(); renderBriefing(); }
-  savePipe(p); renderPipeline();
-});
 
 /* ---- Gear & kit ---- */
 const GCHK = "nf-gear-check-v1";
+const INV_KEY = "nf-gear-inv-v1";
+const loadInv = () => { try { return JSON.parse(localStorage.getItem(INV_KEY)) } catch { return null } };
+const saveInv = a => localStorage.setItem(INV_KEY, JSON.stringify(a));
+
 function renderGear(gear) {
   if (!gear) return;
+  // Seed editable inventory from gear.json once
+  if (!loadInv()) saveInv((gear.inventory || []).map((x, i) => ({ id: Date.now() + i, item: x.item, detail: x.detail || "" })));
   const done = new Set(JSON.parse(localStorage.getItem(GCHK) || "[]"));
   $("#gear-checklist").innerHTML = (gear.checklist || []).map((c, i) => `
     <li class="${done.has(i) ? "done" : ""}" data-gi="${i}">
       <span style="display:flex;align-items:center"><span class="box">${done.has(i) ? "✓" : ""}</span>
       <span class="lead">${c}</span></span></li>`).join("");
-  $("#gear-inventory").innerHTML = (gear.inventory || []).map(x =>
-    `<li><span class="lead">${x.item}</span><span class="right">${x.detail || ""}</span></li>`).join("") || '<li class="muted">—</li>';
+  renderInventory();
   $("#gear-maint").innerHTML = (gear.maintenance || []).map(x =>
     `<li><span><span class="lead">${x.task}</span> ${x.type === "wishlist" ? '<span class="tag wish">wishlist</span>' : ""}</span>
     <span class="right">${x.due || ""}</span></li>`).join("") || '<li class="muted">—</li>';
+}
+function renderInventory() {
+  const inv = loadInv() || [];
+  $("#gear-inventory").innerHTML = inv.length ? inv.map(x =>
+    `<li data-id="${x.id}"><span class="lead">${x.item}</span>
+     <span class="right">${x.detail || ""}</span>
+     <button class="del" data-del="${x.id}">✕</button></li>`).join("")
+    : '<li class="muted">No gear yet — add a piece above.</li>';
 }
 $("#gear-checklist").addEventListener("click", e => {
   const li = e.target.closest("[data-gi]"); if (!li) return;
@@ -350,23 +357,34 @@ $("#gear-checklist").addEventListener("click", e => {
   li.classList.toggle("done"); li.querySelector(".box").textContent = done.has(i) ? "✓" : "";
 });
 $("#gear-reset").addEventListener("click", () => { localStorage.removeItem(GCHK); renderGear(window._gear); });
+// Add / remove gear. Type "Item — detail" (dash optional) to set a detail.
+$("#gear-inv-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const raw = $("#gear-inv-input").value.trim(); if (!raw) return;
+  const parts = raw.split(/\s+[—-]\s+/);
+  const inv = loadInv() || [];
+  inv.push({ id: Date.now(), item: parts[0].trim(), detail: (parts[1] || "").trim() });
+  saveInv(inv); $("#gear-inv-input").value = ""; renderInventory();
+});
+$("#gear-inventory").addEventListener("click", e => {
+  const del = e.target.closest("[data-del]"); if (!del) return;
+  saveInv((loadInv() || []).filter(x => x.id != del.dataset.del)); renderInventory();
+});
 
 /* ---------- Boot ---------- */
 async function boot() {
-  setDate(); loadWeather(); seedTasks(); seedPipe();
+  setDate(); loadWeather(); seedTasks();
   // Engine pieces that don't need network data
-  renderStreaks(); renderCadence(); renderPipeline(); syncDoneBtn();
+  renderStreaks(); renderProgress(); syncDoneBtn();
 
-  const [g, p, s, cal, gear, meta] = await Promise.all([
+  const [g, p, cal, gear, meta] = await Promise.all([
     loadJSON("data/garmin.json", null),
     loadJSON("data/photography.json", null),
-    loadJSON("data/social.json", null),
     loadJSON("data/calendar.json", null),
     loadJSON("data/gear.json", null),
     loadJSON("data/meta.json", null),
   ]);
-  renderGarmin(g); renderPhoto(p); renderSocial(s); renderCalendar(cal);
-  renderSocialGoal(s);
+  renderGarmin(g); renderPhoto(p); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
   renderBriefing();   // after readiness + fixture are populated
   if (meta?.lastSync) $("#last-sync").textContent = "Last sync: " +

@@ -200,6 +200,15 @@ main{padding:14px 12px 30px}
 .pipe-del{background:none;border:none;color:var(--muted);font:inherit;cursor:pointer;font-size:.85rem}
 .tag.wish{background:rgba(245,158,11,.14);color:var(--amber);border:1px solid rgba(245,158,11,.4)}
 
+/* Goals & Progress */
+.bw-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.bw-head .big{font-size:2rem;font-weight:700;font-family:'Space Grotesk',sans-serif}
+.pill.good{background:rgba(74,222,128,.14);color:var(--pos);border-color:rgba(74,222,128,.4)}
+.prog-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--line-soft);font-size:.86rem}
+.prog-row:last-child{border-bottom:none}
+.prog-row .right{color:var(--ink-dim);font-size:.78rem;white-space:nowrap}
+
 @media(min-width:680px){
   .grid{grid-template-columns:repeat(4,1fr)}
   .span2{grid-column:span 2}

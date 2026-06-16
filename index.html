@@ -41,7 +41,7 @@
     <button class="tab active" data-target="sec-overview">Overview</button>
     <button class="tab" data-target="sec-fitness">Fitness</button>
     <button class="tab" data-target="sec-work">Work</button>
-    <button class="tab" data-target="sec-social">Social</button>
+    <button class="tab" data-target="sec-progress">Progress</button>
     <button class="tab" data-target="sec-tasks">Tasks</button>
     <button class="tab" data-target="sec-gear">Gear</button>
   </nav>
@@ -107,35 +107,33 @@
       </article>
     </section>
 
-    <!-- ===== SOCIAL ===== -->
-    <section id="sec-social" class="panel-group">
-      <div class="grid" id="s-cards"></div>
-
-      <article class="card" id="s-goal-card">
-        <h3>Growth goal <span class="pill" id="s-goal-handle">@nfalzon_photos</span></h3>
-        <div class="goalbar"><div class="goalbar-fill" id="s-goal-fill"></div></div>
-        <small id="s-goal-text">—</small>
-      </article>
-
-      <article class="card" id="s-cadence-card">
-        <h3>Posting this week</h3>
-        <div class="cadence" id="s-cadence"></div>
-        <small class="muted">Tap a dot to log a post. Target set in config.</small>
-      </article>
-
+    <!-- ===== GOALS & PROGRESS ===== -->
+    <section id="sec-progress" class="panel-group">
       <article class="card">
-        <h3>Content pipeline</h3>
-        <form class="quick-add" id="pipe-form">
-          <input id="pipe-input" placeholder="Add a content idea…" autocomplete="off" />
+        <h3>Bodyweight <span class="pill" id="bw-togo">—</span></h3>
+        <div class="bw-head">
+          <span class="big" id="bw-current">--</span>
+          <small id="bw-target">target —</small>
+        </div>
+        <form class="quick-add" id="bw-form">
+          <input id="bw-input" type="number" step="0.1" inputmode="decimal" placeholder="Log today's weight (kg)" />
           <button type="submit">+</button>
         </form>
-        <div class="pipeline" id="pipeline"></div>
-        <small class="muted">Tap a card to push it to the next stage · ✕ to remove.</small>
+        <ul class="list" id="bw-log"></ul>
       </article>
 
       <article class="card">
-        <h3>Top recent posts</h3>
-        <ul class="list" id="s-top"><li class="muted">No social data yet.</li></ul>
+        <h3>Key lifts / PRs</h3>
+        <form class="quick-add" id="pr-form">
+          <input id="pr-input" placeholder="e.g. Back squat 100kg" autocomplete="off" />
+          <button type="submit">+</button>
+        </form>
+        <ul class="list checks" id="pr-list"></ul>
+      </article>
+
+      <article class="card">
+        <h3>Streaks &amp; this week</h3>
+        <div id="progress-streaks"></div>
       </article>
     </section>
 
@@ -161,7 +159,12 @@
       </article>
       <article class="card">
         <h3>Kit inventory</h3>
-        <ul class="list" id="gear-inventory"><li class="muted">Add your gear in data/gear.json.</li></ul>
+        <form class="quick-add" id="gear-inv-form">
+          <input id="gear-inv-input" placeholder="Add gear — e.g. 85mm f/1.4 — portraits" autocomplete="off" />
+          <button type="submit">+</button>
+        </form>
+        <ul class="list" id="gear-inventory"></ul>
+        <small class="muted">Add or remove as your kit changes · ✕ to remove.</small>
       </article>
       <article class="card">
         <h3>Maintenance &amp; wishlist</h3>

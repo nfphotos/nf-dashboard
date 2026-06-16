@@ -24,14 +24,6 @@ window.CONFIG = {
     bodyweightTargetKg: 75
   },
 
-  // Social growth targets (drives the goal bar + posting cadence ring)
-  // >>> EDIT THESE <<<
-  social: {
-    followerGoal: 7500,      // target for @nfalzon_photos
-    currentFollowers: 4820,  // updated by social.json when synced
-    weeklyPostTarget: 4      // posts/reels per week you're aiming for
-  },
-
   // Daily habits shown as streaks on the Overview. id must be unique.
   habits: [
     { id: "move",  label: "Move / steps", icon: "🏃" },
