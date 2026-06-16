@@ -29,6 +29,11 @@ MATCH_COLOR_IDS = {"10", "2"}
 DEFAULT_CALENDARS = ["falzonnicholas01@gmail.com"]
 LOOKAHEAD_DAYS = 150
 
+# Keep the feed to real fixtures/one-offs. Recurring green events (e.g. the
+# weekly Imperial Band Practice) and obvious practice/rehearsal titles are skipped.
+SKIP_RECURRING = True
+SKIP_TITLE_KEYWORDS = ("band practice", "rehearsal")
+
 
 def main():
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
@@ -61,6 +66,11 @@ def main():
                 pageToken=page).execute()
             for e in resp.get("items", []):
                 if e.get("colorId") not in MATCH_COLOR_IDS:
+                    continue
+                if SKIP_RECURRING and e.get("recurringEventId"):
+                    continue  # drop weekly practices etc.
+                title_l = (e.get("summary") or "").lower()
+                if any(k in title_l for k in SKIP_TITLE_KEYWORDS):
                     continue
                 start = e.get("start", {})
                 end = e.get("end", {})
