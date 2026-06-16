@@ -1,0 +1,14 @@
+{
+  "name": "NF Command Centre",
+  "short_name": "NF Centre",
+  "description": "Personal dashboard — fitness, photography, social & money.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0c0f0a",
+  "theme_color": "#0c0f0a",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

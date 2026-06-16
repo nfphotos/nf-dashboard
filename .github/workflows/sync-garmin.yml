@@ -1,0 +1,36 @@
+name: Sync Garmin
+
+on:
+  schedule:
+    - cron: "30 5 * * *"   # 05:30 UTC daily (~07:30 Malta summer). Adjust as you like.
+  workflow_dispatch: {}      # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write            # needed to commit the refreshed JSON
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install -r scripts/requirements.txt
+
+      - name: Pull Garmin data
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python scripts/sync_garmin.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "garmin-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/garmin.json data/meta.json
+          git diff --cached --quiet || git commit -m "chore: garmin sync $(date -u +%FT%TZ)"
+          git push

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c0f0a" />
+  <title>NF // Command Centre</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <!-- ===== Top status bar ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">NF</span>
+      <div class="brand-text">
+        <strong>COMMAND CENTRE</strong>
+        <small id="now-date">—</small>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="weather" id="weather">
+        <span class="wx-temp" id="wx-temp">--°</span>
+        <span class="wx-meta" id="wx-meta">Malta</span>
+      </div>
+      <div class="golden" id="golden">
+        <small>GOLDEN HOUR</small>
+        <span id="golden-times">— / —</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Section nav (phone tabs) ===== -->
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-target="sec-overview">Overview</button>
+    <button class="tab" data-target="sec-fitness">Fitness</button>
+    <button class="tab" data-target="sec-work">Work</button>
+    <button class="tab" data-target="sec-social">Social</button>
+    <button class="tab" data-target="sec-tasks">Tasks</button>
+    <button class="tab" data-target="sec-money">Money</button>
+  </nav>
+
+  <main>
+    <!-- ===== OVERVIEW ===== -->
+    <section id="sec-overview" class="panel-group active">
+      <div class="readiness-banner" id="readiness-banner">
+        <div class="rb-ring" id="rb-ring"><span id="rb-score">--</span></div>
+        <div class="rb-text">
+          <h2 id="rb-title">Readiness</h2>
+          <p id="rb-advice">Connect Garmin to see today's training call.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card stat" id="ov-bodybattery"><h3>Body Battery</h3><div class="big">--</div><small>peak / low</small></article>
+        <article class="card stat" id="ov-sleep"><h3>Sleep</h3><div class="big">--</div><small>last night</small></article>
+        <article class="card stat" id="ov-steps"><h3>Steps</h3><div class="big">--</div><small>today</small></article>
+        <article class="card stat" id="ov-hrv"><h3>HRV</h3><div class="big">--</div><small>overnight avg</small></article>
+        <article class="card span2" id="ov-next-shoot"><h3>Next shoot</h3><div class="big-line">—</div><small>—</small></article>
+        <article class="card span2" id="ov-renewal"><h3>Next renewal</h3><div class="big-line">—</div><small>—</small></article>
+      </div>
+    </section>
+
+    <!-- ===== FITNESS ===== -->
+    <section id="sec-fitness" class="panel-group">
+      <div class="grid">
+        <article class="card stat"><h3>Resting HR</h3><div class="big" id="f-rhr">--</div><small>bpm</small></article>
+        <article class="card stat"><h3>Stress</h3><div class="big" id="f-stress">--</div><small>avg today</small></article>
+        <article class="card stat"><h3>VO₂ Max</h3><div class="big" id="f-vo2">--</div><small>ml/kg/min</small></article>
+        <article class="card stat"><h3>Training load</h3><div class="big" id="f-load">--</div><small>7-day</small></article>
+      </div>
+      <article class="card">
+        <h3>Today's garage-gym session <span class="pill" id="f-session-pill">auto</span></h3>
+        <div id="f-workout" class="workout">—</div>
+      </article>
+      <article class="card">
+        <h3>Recent activities</h3>
+        <ul class="list" id="f-activities"><li class="muted">No activity data yet.</li></ul>
+      </article>
+    </section>
+
+    <!-- ===== WORK / PHOTOGRAPHY ===== -->
+    <section id="sec-work" class="panel-group">
+      <article class="card">
+        <h3>Upcoming shoots</h3>
+        <ul class="list" id="w-upcoming"><li class="muted">No shoots scheduled.</li></ul>
+      </article>
+      <article class="card">
+        <h3>Latest work</h3>
+        <div class="gallery" id="w-gallery"><p class="muted">Add image URLs in data/photography.json.</p></div>
+      </article>
+    </section>
+
+    <!-- ===== SOCIAL ===== -->
+    <section id="sec-social" class="panel-group">
+      <div class="grid" id="s-cards"></div>
+      <article class="card">
+        <h3>Top recent posts</h3>
+        <ul class="list" id="s-top"><li class="muted">No social data yet.</li></ul>
+      </article>
+    </section>
+
+    <!-- ===== TASKS ===== -->
+    <section id="sec-tasks" class="panel-group">
+      <article class="card">
+        <h3>Today / to-do</h3>
+        <form class="quick-add" id="task-form">
+          <input id="task-input" placeholder="Add a task…" autocomplete="off" />
+          <button type="submit">+</button>
+        </form>
+        <ul class="list checks" id="t-list"></ul>
+        <small class="muted">Saved on this device.</small>
+      </article>
+    </section>
+
+    <!-- ===== MONEY ===== -->
+    <section id="sec-money" class="panel-group">
+      <div class="grid">
+        <article class="card stat"><h3>Monthly subscriptions</h3><div class="big" id="m-subs-total">--</div><small id="m-subs-count">—</small></article>
+        <article class="card stat"><h3>This month in</h3><div class="big pos" id="m-in">--</div><small>shoot income</small></article>
+        <article class="card stat"><h3>This month out</h3><div class="big neg" id="m-out">--</div><small>expenses</small></article>
+        <article class="card stat"><h3>Net</h3><div class="big" id="m-net">--</div><small>in − out</small></article>
+      </div>
+      <article class="card">
+        <h3>Subscriptions & renewals</h3>
+        <ul class="list" id="m-subs"><li class="muted">Add subscriptions in data/finances.json.</li></ul>
+      </article>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="last-sync">Last sync: —</span>
+    <span>·</span>
+    <span>NF Photography</span>
+  </footer>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+    }
+  </script>
+</body>
+</html>

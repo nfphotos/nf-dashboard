@@ -1,0 +1,13 @@
+{
+  "upcoming": [
+    { "title": "Local FC vs Rivals — Match Day", "date": "Sat 20 Jun", "time": "15:00", "location": "National Stadium" },
+    { "title": "Track & Field Meet", "date": "Sun 28 Jun", "time": "09:30", "location": "Marsa" },
+    { "title": "Boxing Night — Ringside", "date": "Fri 03 Jul", "time": "19:00", "location": "Ta' Qali" }
+  ],
+  "gallery": [
+    { "src": "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=70", "caption": "Football", "link": "" },
+    { "src": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&q=70", "caption": "Track", "link": "" },
+    { "src": "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=70", "caption": "Boxing", "link": "" },
+    { "src": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=600&q=70", "caption": "Action", "link": "" }
+  ]
+}

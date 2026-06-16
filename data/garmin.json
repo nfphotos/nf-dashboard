@@ -1,0 +1,20 @@
+{
+  "daily": {
+    "date": "2026-06-16",
+    "readiness": 74,
+    "bodyBatteryHigh": 88,
+    "bodyBatteryLow": 24,
+    "sleepHours": 7.2,
+    "steps": 6432,
+    "hrv": 58,
+    "restingHR": 49,
+    "stress": 31,
+    "vo2max": 51,
+    "trainingLoad": 412
+  },
+  "activities": [
+    { "name": "Morning Run", "distance": "6.2 km", "duration": "31:40" },
+    { "name": "Strength — Push", "distance": "", "duration": "48:12" },
+    { "name": "Ruck Walk", "distance": "4.0 km", "duration": "42:05" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "accounts": [
+    { "network": "Instagram", "followers": 4820, "followerDelta": 36 },
+    { "network": "YouTube", "followers": 1190, "followerDelta": 14 },
+    { "network": "TikTok", "followers": 720, "followerDelta": -3 }
+  ],
+  "topPosts": [
+    { "network": "Instagram", "title": "Last-minute winner — reel", "metric": "views", "metricValue": 18400 },
+    { "network": "YouTube", "title": "How I shoot night football", "metric": "views", "metricValue": 5210 },
+    { "network": "Instagram", "title": "Ringside knockout sequence", "metric": "likes", "metricValue": 982 }
+  ]
+}
