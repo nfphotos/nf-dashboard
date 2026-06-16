@@ -43,6 +43,7 @@
     <button class="tab" data-target="sec-work">Work</button>
     <button class="tab" data-target="sec-social">Social</button>
     <button class="tab" data-target="sec-tasks">Tasks</button>
+    <button class="tab" data-target="sec-gear">Gear</button>
   </nav>
 
   <main>
@@ -55,6 +56,16 @@
           <p id="rb-advice">Connect Garmin to see today's training call.</p>
         </div>
       </div>
+      <article class="card briefing" id="ov-briefing">
+        <h3>Today <span class="pill" id="brief-date">—</span></h3>
+        <ul class="brief-list" id="brief-list"><li class="muted">Loading your day…</li></ul>
+      </article>
+
+      <article class="card">
+        <h3>Daily streaks <span class="pill">don't break the chain</span></h3>
+        <div class="streaks" id="streaks"></div>
+      </article>
+
       <div class="grid">
         <article class="card stat" id="ov-bodybattery"><h3>Body Battery</h3><div class="big">--</div><small>peak / low</small></article>
         <article class="card stat" id="ov-sleep"><h3>Sleep</h3><div class="big">--</div><small>last night</small></article>
@@ -76,6 +87,7 @@
       <article class="card">
         <h3>Today's garage-gym session <span class="pill" id="f-session-pill">auto</span></h3>
         <div id="f-workout" class="workout">—</div>
+        <button class="action-btn" id="f-done-btn">Mark session done 💪</button>
       </article>
       <article class="card">
         <h3>Recent activities</h3>
@@ -98,6 +110,29 @@
     <!-- ===== SOCIAL ===== -->
     <section id="sec-social" class="panel-group">
       <div class="grid" id="s-cards"></div>
+
+      <article class="card" id="s-goal-card">
+        <h3>Growth goal <span class="pill" id="s-goal-handle">@nfalzon_photos</span></h3>
+        <div class="goalbar"><div class="goalbar-fill" id="s-goal-fill"></div></div>
+        <small id="s-goal-text">—</small>
+      </article>
+
+      <article class="card" id="s-cadence-card">
+        <h3>Posting this week</h3>
+        <div class="cadence" id="s-cadence"></div>
+        <small class="muted">Tap a dot to log a post. Target set in config.</small>
+      </article>
+
+      <article class="card">
+        <h3>Content pipeline</h3>
+        <form class="quick-add" id="pipe-form">
+          <input id="pipe-input" placeholder="Add a content idea…" autocomplete="off" />
+          <button type="submit">+</button>
+        </form>
+        <div class="pipeline" id="pipeline"></div>
+        <small class="muted">Tap a card to push it to the next stage · ✕ to remove.</small>
+      </article>
+
       <article class="card">
         <h3>Top recent posts</h3>
         <ul class="list" id="s-top"><li class="muted">No social data yet.</li></ul>
@@ -114,6 +149,23 @@
         </form>
         <ul class="list checks" id="t-list"></ul>
         <small class="muted">Saved on this device.</small>
+      </article>
+    </section>
+
+    <!-- ===== GEAR & KIT ===== -->
+    <section id="sec-gear" class="panel-group">
+      <article class="card">
+        <h3>Pre-shoot checklist <button class="mini-btn" id="gear-reset">reset</button></h3>
+        <ul class="list checks" id="gear-checklist"></ul>
+        <small class="muted">Run through before every fixture. Reset after you pack down.</small>
+      </article>
+      <article class="card">
+        <h3>Kit inventory</h3>
+        <ul class="list" id="gear-inventory"><li class="muted">Add your gear in data/gear.json.</li></ul>
+      </article>
+      <article class="card">
+        <h3>Maintenance &amp; wishlist</h3>
+        <ul class="list" id="gear-maint"><li class="muted">—</li></ul>
       </article>
     </section>
 

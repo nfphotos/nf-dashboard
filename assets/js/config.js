@@ -15,11 +15,29 @@ window.CONFIG = {
   },
 
   // Fitness goals (drives readiness messaging + progress where shown)
+  // >>> EDIT THESE to your real targets <<<
   goals: {
     weeklyRuns: 3,
     dailySteps: 9000,
-    sleepHours: 7.5
+    sleepHours: 7.5,
+    bodyweightKg: 78,        // current — for the trend later
+    bodyweightTargetKg: 75
   },
+
+  // Social growth targets (drives the goal bar + posting cadence ring)
+  // >>> EDIT THESE <<<
+  social: {
+    followerGoal: 7500,      // target for @nfalzon_photos
+    currentFollowers: 4820,  // updated by social.json when synced
+    weeklyPostTarget: 4      // posts/reels per week you're aiming for
+  },
+
+  // Daily habits shown as streaks on the Overview. id must be unique.
+  habits: [
+    { id: "move",  label: "Move / steps", icon: "🏃" },
+    { id: "sleep", label: "Sleep well",   icon: "😴" },
+    { id: "post",  label: "Create / post", icon: "🎬" }
+  ],
 
   // Garage gym inventory — used to generate workouts
   gym: { dumbbells: true, squatRack: true, barbell: true, pullupBar: false },

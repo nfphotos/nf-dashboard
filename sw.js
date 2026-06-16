@@ -1,5 +1,5 @@
 // Simple offline cache. Bump VERSION to force refresh of the shell.
-const VERSION = "nf-v1";
+const VERSION = "nf-v2";
 const SHELL = [
   ".", "index.html",
   "assets/css/styles.css",

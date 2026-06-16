@@ -1,0 +1,26 @@
+{
+  "_note": "Edit freely. Checklist state is remembered on your device; reset it after each shoot.",
+  "checklist": [
+    "Batteries charged (body + spares)",
+    "Memory cards formatted",
+    "Lenses cleaned",
+    "Sensor check",
+    "Firmware / settings dialed in",
+    "Monopod / strap packed",
+    "Press / sideline accreditation confirmed",
+    "Backup card + reader in bag"
+  ],
+  "inventory": [
+    { "item": "Camera body", "detail": "primary" },
+    { "item": "70-200mm f/2.8", "detail": "main match lens" },
+    { "item": "24-70mm f/2.8", "detail": "wide / portraits" },
+    { "item": "Monopod", "detail": "sideline" },
+    { "item": "CFexpress / SD cards", "detail": "×4" }
+  ],
+  "maintenance": [
+    { "task": "Sensor clean", "due": "every 2 months", "type": "maintenance" },
+    { "task": "Back up & wipe cards", "due": "after each shoot", "type": "maintenance" },
+    { "task": "135mm f/1.8 prime", "due": "wishlist", "type": "wishlist" },
+    { "task": "Second body (backup)", "due": "wishlist", "type": "wishlist" }
+  ]
+}
