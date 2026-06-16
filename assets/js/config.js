@@ -29,5 +29,13 @@ window.CONFIG = {
   readiness: {
     highThreshold: 70,   // >= this => push / heavy day
     lowThreshold: 35     // <= this => recovery / mobility
+  },
+
+  // Google Calendar: green events = matches/fixtures you're shooting.
+  // Colour IDs 10 (Basil) and 2 (Sage) are treated as green.
+  // (Calendar IDs + the actual fetch live in scripts/sync_calendar.py.)
+  calendar: {
+    matchColorIds: ["10", "2"],
+    showUpcoming: 12
   }
 };

@@ -75,6 +75,29 @@ Edit the JSON in **`data/`** to seed content:
 
 ---
 
+## 6. Connect Google Calendar (green events = matches)
+
+Your fixtures/shoots are colour-coded **green** (Basil = colorId 10) on Google Calendar.
+Because only Google's API exposes event colour (an .ics feed can't), the sync uses a
+**service account** — set up once, then fully automatic:
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → create a project.
+2. **APIs & Services → Library →** enable **Google Calendar API**.
+3. **APIs & Services → Credentials → Create credentials → Service account.** Create it,
+   then open it → **Keys → Add key → JSON** → download the key file.
+4. Copy the service account's email (looks like `name@project.iam.gserviceaccount.com`).
+5. In **Google Calendar** (web) → your calendar's **Settings → Share with specific people**
+   → add that email with **"See all event details"**. (Repeat for any extra calendars.)
+6. In GitHub: **Settings → Secrets and variables → Actions →** add secret
+   `GOOGLE_SERVICE_ACCOUNT_JSON` = the full contents of the JSON key file.
+   *(Optional: add a repo **variable** `CALENDAR_IDS` = comma-separated calendar IDs if you
+   want more than your primary calendar.)*
+7. **Actions → Sync Calendar → Run workflow** to test. It then runs every morning and
+   commits `data/calendar.json`. Anything green shows up under **Work → Upcoming matches**.
+
+> The dashboard already ships with your real fixtures hand-seeded, so it works before you
+> finish this — the service account just makes it self-updating.
+
 ## Roadmap / not yet wired (say the word and I'll add)
 
 - **Social auto-sync** — YouTube Data API (easy, key-based) and Instagram Graph API

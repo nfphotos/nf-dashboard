@@ -102,18 +102,37 @@ function renderWorkout(type) {
   $("#f-session-pill").textContent = type;
 }
 
-/* ---------- Photography ---------- */
+/* ---------- Calendar (Google Calendar — green events = matches/fixtures) ---------- */
+function fmtEventDate(iso, allDay) {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  if (allDay) return day;
+  const t = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return `${day}<br>${t}`;
+}
+function renderCalendar(c) {
+  const items = (c?.matches || [])
+    .filter(m => new Date(m.end || m.start) >= new Date())  // upcoming only
+    .sort((a, b) => new Date(a.start) - new Date(b.start));
+  const ul = $("#w-upcoming");
+  if (!items.length) { ul.innerHTML = '<li class="muted">No upcoming green events on your calendar.</li>'; return; }
+
+  ul.innerHTML = items.slice(0, 12).map(m => {
+    const isMatch = /\bvs\b|trophy|final|cup|tournament|league|futsal|rugby|waterpolo|championship/i.test(m.title);
+    return `<li class="match-row ${m.allDay ? "allday" : ""}">
+      <span><span class="lead">${m.title}${isMatch ? '<span class="tag match">fixture</span>' : ''}</span>
+      ${m.location ? `<br><span class="sub">${m.location}</span>` : ""}</span>
+      <span class="right">${fmtEventDate(m.start, m.allDay)}</span></li>`;
+  }).join("");
+
+  const n = items[0];
+  $("#ov-next-shoot .big-line").textContent = n.title;
+  $("#ov-next-shoot small").innerHTML = `${fmtEventDate(n.start, n.allDay).replace("<br>", " · ")}${n.location ? " · " + n.location : ""}`;
+}
+
+/* ---------- Photography (gallery only — fixtures come from calendar) ---------- */
 function renderPhoto(p) {
-  if (!p) return;
-  if (p.upcoming?.length) {
-    $("#w-upcoming").innerHTML = p.upcoming.map(s => `
-      <li><span><span class="lead">${s.title}</span><br><span class="sub">${s.location || ""}</span></span>
-      <span class="right">${s.date}${s.time ? "<br>" + s.time : ""}</span></li>`).join("");
-    const n = p.upcoming[0];
-    $("#ov-next-shoot .big-line").textContent = n.title;
-    $("#ov-next-shoot small").textContent = `${n.date}${n.location ? " · " + n.location : ""}`;
-  }
-  if (p.gallery?.length) {
+  if (p?.gallery?.length) {
     $("#w-gallery").innerHTML = p.gallery.map(g =>
       `<a href="${g.link || g.src}" target="_blank" rel="noopener"><img loading="lazy" src="${g.src}" alt="${g.caption || ""}"></a>`).join("");
   }
@@ -205,14 +224,15 @@ async function seedTasks() {
 /* ---------- Boot ---------- */
 async function boot() {
   setDate(); loadWeather(); seedTasks();
-  const [g, p, s, f, meta] = await Promise.all([
+  const [g, p, s, f, cal, meta] = await Promise.all([
     loadJSON("data/garmin.json", null),
     loadJSON("data/photography.json", null),
     loadJSON("data/social.json", null),
     loadJSON("data/finances.json", null),
+    loadJSON("data/calendar.json", null),
     loadJSON("data/meta.json", null),
   ]);
-  renderGarmin(g); renderPhoto(p); renderSocial(s); renderMoney(f);
+  renderGarmin(g); renderPhoto(p); renderSocial(s); renderMoney(f); renderCalendar(cal);
   if (meta?.lastSync) $("#last-sync").textContent = "Last sync: " +
     new Date(meta.lastSync).toLocaleString("en-GB", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
 }
