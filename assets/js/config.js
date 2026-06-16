@@ -10,9 +10,10 @@ window.CONFIG = {
 
   // Your social handles — used for display + the (optional) sync scripts.
   socials: {
-    instagram: "@nfphotography",   // <-- replace
-    youtube:   "NF Photography",   // <-- replace with channel name/handle
-    tiktok:    ""                  // optional
+    instagramBusiness: "@nfalzon_photos",  // sports-photography account
+    instagramPersonal: "@falzon_mt",       // personal account
+    youtube:   "",                         // <-- add channel handle/name when ready
+    tiktok:    ""                          // optional
   },
 
   // Fitness goals (drives readiness messaging + progress where shown)

@@ -1,12 +1,12 @@
 {
   "accounts": [
-    { "network": "Instagram", "followers": 4820, "followerDelta": 36 },
-    { "network": "YouTube", "followers": 1190, "followerDelta": 14 },
-    { "network": "TikTok", "followers": 720, "followerDelta": -3 }
+    { "network": "IG · Photos", "handle": "@nfalzon_photos", "followers": 4820, "followerDelta": 36 },
+    { "network": "IG · Personal", "handle": "@falzon_mt", "followers": 1310, "followerDelta": 9 },
+    { "network": "YouTube", "handle": "", "followers": 1190, "followerDelta": 14 }
   ],
   "topPosts": [
-    { "network": "Instagram", "title": "Last-minute winner — reel", "metric": "views", "metricValue": 18400 },
-    { "network": "YouTube", "title": "How I shoot night football", "metric": "views", "metricValue": 5210 },
-    { "network": "Instagram", "title": "Ringside knockout sequence", "metric": "likes", "metricValue": 982 }
+    { "network": "@nfalzon_photos", "title": "Last-minute winner — reel", "metric": "views", "metricValue": 18400 },
+    { "network": "@nfalzon_photos", "title": "Ringside knockout sequence", "metric": "likes", "metricValue": 982 },
+    { "network": "@falzon_mt", "title": "Behind the scenes — match day", "metric": "views", "metricValue": 3100 }
   ]
 }
