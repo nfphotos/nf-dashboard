@@ -24,6 +24,14 @@ window.CONFIG = {
     bodyweightTargetKg: 75
   },
 
+  // Wake times you don't get to choose. "HH:MM" 24h, or null to let the
+  // dashboard use your own observed Garmin wake time for that weekday.
+  // Mon-Wed are 05:00 for the early work start.
+  wakeTimes: {
+    mon: "05:00", tue: "05:00", wed: "05:00",
+    thu: null, fri: null, sat: null, sun: null
+  },
+
   // Daily habits shown as streaks on the Overview. id must be unique.
   habits: [
     { id: "move",  label: "Move / steps", icon: "🏃" },

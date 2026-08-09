@@ -246,7 +246,14 @@ function renderTonight(history, calendar) {
   const tmwIdx = (tomorrow.getDay() + 6) % 7;
   const tmwISO = tomorrow.toISOString().slice(0, 10);
 
-  const wake = medianWake(history, tmwIdx);
+  // A fixed wake time in config beats the observed pattern: Mon-Wed he has to
+  // be up at 05:00 for an early work start, which is earlier than Garmin's
+  // recorded sleep-end (it logs when he actually stopped sleeping, not the alarm).
+  const dayKey = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"][tmwIdx];
+  const fixed = (CONFIG.wakeTimes || {})[dayKey];
+  const fixedMin = fixed ? Number(fixed.slice(0, 2)) * 60 + Number(fixed.slice(3, 5)) : null;
+
+  const wake = fixedMin ?? medianWake(history, tmwIdx);
   if (wake == null) return;
 
   const round5 = m => Math.round(m / 5) * 5;
@@ -265,8 +272,23 @@ function renderTonight(history, calendar) {
     : "on target this week";
 
   const dayName = DAY_NAMES[tmwIdx];
-  const why = [`${dayName} you're typically up at ${clock(round5(wake))}. ` +
-    `That's ${target}h asleep from ${clock(round5(asleepBy))}, so lights out ${clock(round5(lightsOut))}.`];
+  const why = [
+    fixedMin != null
+      ? `${dayName} you're up at ${clock(wake)} for work. `
+      : `${dayName} you're typically up at ${clock(round5(wake))}. `,
+    `That's ${target}h asleep from ${clock(round5(asleepBy))}, so lights out ${clock(round5(lightsOut))}.`,
+  ];
+
+  // Being honest about the size of the ask beats pretending it's easy.
+  const recent = history.filter(h => h.bedMin != null &&
+    (new Date(h.date + "T00:00:00Z").getUTCDay() + 6) % 7 === tmwIdx).slice(-8);
+  if (recent.length >= 3) {
+    const usual = circMean(recent.map(h => h.bedMin));
+    const shift = ((usual - asleepBy) + 1440) % 1440;
+    if (shift > 20 && shift < 300) {
+      why.push(`You normally fall asleep around ${clock(round5(usual))} on a ${dayName}, so that's ${Math.round(shift)} min earlier — worth moving in 20-min steps rather than all at once.`);
+    }
+  }
 
   // A fixture tomorrow changes the evening, not the morning — worth saying.
   const fixture = ((calendar && calendar.matches) || [])
@@ -456,6 +478,137 @@ const SESSION_TYPES = [
   { id: "mobility", label: "Mobility",   icon: "🧘" },
 ];
 const SESSION_KEY = "nf.sessions";
+const GYM_KEY = "nf.gym";
+
+/* Exercise library, built around the garage gym in CONFIG.gym:
+   barbell + squat rack + dumbbells. He can also type anything not listed. */
+const EXERCISES = [
+  { name: "Back squat",        kit: "barbell" },
+  { name: "Front squat",       kit: "barbell" },
+  { name: "Deadlift",          kit: "barbell" },
+  { name: "Romanian deadlift", kit: "barbell" },
+  { name: "Bench press",       kit: "barbell" },
+  { name: "Overhead press",    kit: "barbell" },
+  { name: "Barbell row",       kit: "barbell" },
+  { name: "Hip thrust",        kit: "barbell" },
+  { name: "Goblet squat",      kit: "dumbbells" },
+  { name: "DB bench press",    kit: "dumbbells" },
+  { name: "DB shoulder press", kit: "dumbbells" },
+  { name: "DB row",            kit: "dumbbells" },
+  { name: "DB curl",           kit: "dumbbells" },
+  { name: "Lateral raise",     kit: "dumbbells" },
+  { name: "Bulgarian split squat", kit: "dumbbells" },
+  { name: "Walking lunge",     kit: "dumbbells" },
+  { name: "Farmer carry",      kit: "dumbbells" },
+  { name: "Push-up",           kit: "bodyweight" },
+  { name: "Plank",             kit: "bodyweight" },
+  { name: "Calf raise",        kit: "bodyweight" },
+];
+
+const loadGym = () => { try { return JSON.parse(localStorage.getItem(GYM_KEY)) || []; } catch { return []; } };
+const saveGym = e => localStorage.setItem(GYM_KEY, JSON.stringify(e.slice(-1000)));
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+/** Last time he did this lift — the whole point of writing it down. */
+function lastTime(name) {
+  const prior = loadGym()
+    .filter(e => e.name.toLowerCase() === name.toLowerCase() && e.date !== todayISO())
+    .sort((a, b) => a.at - b.at);
+  return prior[prior.length - 1] || null;
+}
+
+const setsLine = e => `${e.sets}×${e.reps}${e.kg ? ` @ ${e.kg}kg` : ""}`;
+
+function renderGym() {
+  const card = $("#gym-card"); if (!card) return;
+  const all = loadGym();
+  const today = all.filter(e => e.date === todayISO());
+
+  $("#gym-today").innerHTML = today.length
+    ? today.map(e => {
+        const prev = lastTime(e.name);
+        const vol = e.kg ? e.sets * e.reps * e.kg : null;
+        return `<div class="gym-row">
+          <div><strong>${esc(e.name)}</strong>
+            <small>${setsLine(e)}${vol ? ` · ${fmt.format(Math.round(vol))} kg volume` : ""}</small></div>
+          <div class="gym-row-right">
+            ${prev ? `<small class="gym-prev">last ${setsLine(prev)}</small>` : ""}
+            <button class="mini-x" data-at="${e.at}" aria-label="Remove">✕</button>
+          </div>
+        </div>`;
+      }).join("")
+    : '<p class="muted">Nothing logged today. Tap below as you go.</p>';
+
+  $("#gym-today").querySelectorAll(".mini-x").forEach(b =>
+    b.addEventListener("click", () => { saveGym(loadGym().filter(x => x.at !== Number(b.dataset.at))); renderGym(); }));
+
+  // Recent sessions, grouped by day
+  const days = [...new Set(all.map(e => e.date))].filter(d => d !== todayISO()).sort().reverse().slice(0, 5);
+  $("#session-log").innerHTML = days.length
+    ? days.map(d => {
+        const items = all.filter(e => e.date === d);
+        return `<li><span class="lead">${shortDate(d)}</span>
+          <span class="right">${items.length} exercise${items.length > 1 ? "s" : ""}</span></li>`;
+      }).join("")
+    : "";
+
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const daysThisWeek = new Set(all.filter(e => new Date(e.date + "T00:00:00") >= weekAgo).map(e => e.date)).size;
+  $("#log-week").textContent = daysThisWeek === 0 ? "none this week"
+    : `${daysThisWeek} session${daysThisWeek > 1 ? "s" : ""} this week`;
+}
+
+function openPicker() {
+  $("#gym-picker").hidden = false;
+  $("#gym-entry").hidden = true;
+  $("#gym-search").value = "";
+  renderPickerList("");
+  $("#gym-search").focus();
+}
+
+function renderPickerList(q) {
+  const term = q.trim().toLowerCase();
+  const recent = [...new Set(loadGym().slice().reverse().map(e => e.name))].slice(0, 4);
+  const matches = EXERCISES.filter(e => !term || e.name.toLowerCase().includes(term));
+
+  const chip = (name, cls = "") => `<button class="gym-chip ${cls}" data-name="${esc(name)}">${esc(name)}</button>`;
+  let html = "";
+  if (!term && recent.length) html += `<div class="gym-group">Recent</div>` + recent.map(n => chip(n, "recent")).join("");
+  html += (matches.length ? `<div class="gym-group">Exercises</div>` + matches.map(e => chip(e.name)).join("") : "");
+  if (term && !matches.some(m => m.name.toLowerCase() === term)) {
+    html += `<div class="gym-group">Custom</div>` + chip(q.trim(), "custom");
+  }
+  $("#gym-list").innerHTML = html;
+  $("#gym-list").querySelectorAll(".gym-chip").forEach(b =>
+    b.addEventListener("click", () => openEntry(b.dataset.name)));
+}
+
+function openEntry(name) {
+  $("#gym-picker").hidden = true;
+  $("#gym-entry").hidden = false;
+  $("#gym-entry").dataset.name = name;
+  $("#gym-entry-name").textContent = name;
+
+  const prev = lastTime(name);
+  $("#gym-last").textContent = prev
+    ? `Last time (${shortDate(prev.date)}): ${setsLine(prev)}`
+    : "First time logging this one.";
+  // Pre-fill from last time so a repeat set is one tap.
+  if (prev) { $("#gym-sets").value = prev.sets; $("#gym-reps").value = prev.reps; $("#gym-kg").value = prev.kg ?? ""; }
+}
+
+function saveEntry() {
+  const name = $("#gym-entry").dataset.name;
+  const sets = Number($("#gym-sets").value), reps = Number($("#gym-reps").value);
+  const kgRaw = $("#gym-kg").value;
+  if (!name || !sets || !reps) return;
+  const all = loadGym();
+  all.push({ name, sets, reps, kg: kgRaw === "" ? null : Number(kgRaw), date: todayISO(), at: Date.now() });
+  saveGym(all);
+  markHabitDone("move");
+  $("#gym-entry").hidden = true;
+  renderGym();
+}
 
 const loadSessions = () => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)) || []; } catch { return []; } };
 const saveSessions = s => localStorage.setItem(SESSION_KEY, JSON.stringify(s.slice(-200)));
@@ -473,30 +626,19 @@ function removeSession(at) {
   renderSessions();
 }
 
+/** The exercise-level log replaced the type-only buttons; this now just
+    wires the gym card up. */
 function renderSessions() {
-  const grid = $("#session-grid"); if (!grid) return;
-  const sessions = loadSessions();
+  if (!$("#gym-card")) return;
+  renderGym();
 
-  grid.innerHTML = SESSION_TYPES.map(t =>
-    `<button class="session-btn" data-type="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join("");
-  grid.querySelectorAll(".session-btn").forEach(b =>
-    b.addEventListener("click", () => logSession(b.dataset.type)));
-
-  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-  const thisWeek = sessions.filter(s => new Date(s.date + "T00:00:00") >= weekAgo).length;
-  $("#log-week").textContent = thisWeek === 0 ? "none this week" : `${thisWeek} this week`;
-
-  const recent = sessions.slice(-8).reverse();
-  $("#session-log").innerHTML = recent.length
-    ? recent.map(s => {
-        const t = SESSION_TYPES.find(x => x.id === s.type) || { label: s.type, icon: "•" };
-        return `<li><span class="lead">${t.icon} ${t.label}</span>
-          <span class="right">${shortDate(s.date)}
-          <button class="mini-x" data-at="${s.at}" aria-label="Remove">✕</button></span></li>`;
-      }).join("")
-    : '<li class="muted">Nothing logged yet.</li>';
-  $("#session-log").querySelectorAll(".mini-x").forEach(b =>
-    b.addEventListener("click", () => removeSession(Number(b.dataset.at))));
+  $("#gym-add-btn").onclick = openPicker;
+  $("#gym-search").oninput = e => renderPickerList(e.target.value);
+  $("#gym-search").onkeydown = e => {
+    if (e.key === "Enter" && e.target.value.trim()) { e.preventDefault(); openEntry(e.target.value.trim()); }
+  };
+  $("#gym-entry-close").onclick = () => { $("#gym-entry").hidden = true; };
+  $("#gym-save").onclick = saveEntry;
 }
 
 function renderTrends(history) {

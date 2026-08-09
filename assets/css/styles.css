@@ -308,3 +308,43 @@ table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
   font-weight:700; color:var(--accent); line-height:1.1; font-variant-numeric:tabular-nums; }
 .tn-arrow{ color:var(--muted); font-size:18px; }
 .tn-why{ margin:8px 0 0; color:var(--ink-dim); font-size:12.5px; line-height:1.5; }
+
+/* ---------- Gym logger -------------------------------------------- */
+.gym-today{ margin:4px 0 10px; }
+.gym-row{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+  padding:8px 0; border-bottom:1px solid var(--line-soft);
+}
+.gym-row strong{ display:block; font-size:14px; }
+.gym-row small{ color:var(--ink-dim); font-size:12px; font-variant-numeric:tabular-nums; }
+.gym-row-right{ display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.gym-prev{ color:var(--muted); font-size:11px; }
+
+.gym-picker{ margin:8px 0; }
+.gym-picker input{
+  width:100%; padding:10px 12px; border-radius:10px;
+  background:var(--card-2); border:1px solid var(--line); color:var(--ink); font:inherit;
+}
+.gym-list{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; max-height:210px; overflow-y:auto; }
+.gym-group{ width:100%; color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.06em; margin:6px 0 2px; }
+.gym-chip{
+  padding:7px 11px; border-radius:999px; cursor:pointer; font:inherit; font-size:12.5px;
+  background:var(--card-2); border:1px solid var(--line); color:var(--ink);
+}
+.gym-chip:hover{ border-color:var(--accent); }
+.gym-chip.recent{ border-color:var(--accent-soft); }
+.gym-chip.custom{ border-style:dashed; }
+
+.gym-entry{ margin:10px 0; padding:12px; border-radius:12px;
+  background:var(--card-2); border:1px solid var(--line); }
+.gym-entry-head{ display:flex; justify-content:space-between; align-items:center; }
+.gym-fields{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0; }
+.gym-fields label{ display:flex; flex-direction:column; gap:4px;
+  color:var(--ink-dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+.gym-fields input{
+  padding:10px; border-radius:10px; text-align:center;
+  background:var(--card); border:1px solid var(--line); color:var(--ink);
+  font:inherit; font-size:17px; font-variant-numeric:tabular-nums;
+}
+.gym-fields input:focus{ outline:none; border-color:var(--accent); }

@@ -139,11 +139,37 @@
         <p class="md-read" id="md-read"></p>
       </article>
 
-      <article class="card">
-        <h3>Log a session <span class="pill" id="log-week">—</span></h3>
-        <div class="session-grid" id="session-grid"></div>
+      <article class="card" id="gym-card">
+        <h3>Today's workout <span class="pill" id="log-week">—</span></h3>
+
+        <div class="gym-today" id="gym-today"></div>
+
+        <button class="action-btn" id="gym-add-btn">+ Add exercise</button>
+
+        <!-- Exercise picker -->
+        <div class="gym-picker" id="gym-picker" hidden>
+          <input id="gym-search" placeholder="Search or type your own…" autocomplete="off" />
+          <div class="gym-list" id="gym-list"></div>
+        </div>
+
+        <!-- Set entry for the chosen exercise -->
+        <div class="gym-entry" id="gym-entry" hidden>
+          <div class="gym-entry-head">
+            <strong id="gym-entry-name">—</strong>
+            <button class="mini-btn" id="gym-entry-close">✕</button>
+          </div>
+          <small class="muted" id="gym-last">—</small>
+          <div class="gym-fields">
+            <label>Sets<input id="gym-sets" type="number" inputmode="numeric" min="1" max="20" value="3" /></label>
+            <label>Reps<input id="gym-reps" type="number" inputmode="numeric" min="1" max="100" value="8" /></label>
+            <label>kg<input id="gym-kg" type="number" inputmode="decimal" min="0" step="0.5" placeholder="—" /></label>
+          </div>
+          <button class="action-btn" id="gym-save">Add to workout</button>
+        </div>
+
         <ul class="list" id="session-log"></ul>
-        <small class="muted">Two taps. Saved on this device — the watch never sees it.</small>
+        <div class="session-grid" id="session-grid" hidden></div>
+        <small class="muted">Saved on this device — the watch never sees it.</small>
       </article>
 
       <article class="card">
