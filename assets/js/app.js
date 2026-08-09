@@ -165,9 +165,10 @@ function barChart(el, rows, opts) {
     const v = opts.value(r);
     if (v == null) return "";
     const yy = f.y(v);
-    // Below-goal days are dimmed — same hue, lower emphasis, not a new colour.
-    const dim = opts.goal != null && v < opts.goal ? ' ch-bar--under' : "";
-    return `<rect class="ch-bar${dim}" x="${i * (f.w / rows.length) + 1}" y="${yy}"
+    // Every bar the same. Dimming the below-goal days rendered each day as
+    // pass/fail, which is the framing that turns a missed threshold into
+    // "why bother" — the goal line already shows where the mark is.
+    return `<rect class="ch-bar" x="${i * (f.w / rows.length) + 1}" y="${yy}"
       width="${bw}" height="${Math.max(1, base - yy)}" rx="2"></rect>`;
   }).join("");
 
@@ -229,50 +230,78 @@ const STRESS_BANDS = [
   { key: "highMin", label: "High",   cls: "b4" },
 ];
 
+/* Rewritten after reading the validation literature. The first version of
+   this card showed a daily "stress" headline and the line "Garmin rated 10 of
+   11 days stressful". That should not have shipped:
+
+   · Against subjective stress the Garmin score is close to useless —
+     marginal R² 0.085, conditional R² 0.001 in n=781 (Stress & Health, 2025).
+   · It tracks *positive* high-arousal states too; "excited" and "enthusiastic"
+     score the same as distress. The paper's authors call the name misleading.
+   · Nick's readings are inflated by things that aren't mood at all: he records
+     no workouts, so nothing is excluded from scoring; he works on his feet
+     carrying gear; and Maltese heat depresses HRV on its own.
+   · Showing someone a daily verdict changes how they feel about the day even
+     when the number is fake (Gavriloff 2018, sham feedback, N=63).
+
+   So: no daily verdict, no "stressful" label, no band composition presented as
+   fact. A 7-day rolling mean against his own baseline, the caveat inline, and
+   collapsible so he can dismiss it for good. */
+const STRESS_COLLAPSE_KEY = "nf.stressCollapsed";
+
 function renderStress(history) {
   const card = $("#stress-card");
   if (!card || !Array.isArray(history)) return;
 
-  // Same window as the other trend charts — the backfill will pass 30 days.
-  const rows = history.filter(h => h.stressAvg != null).slice(-TREND_DAYS);
-  if (rows.length < 3) return;                 // backfill still running
+  const all = history.filter(h => h.stressAvg != null);
+  if (all.length < 7) return;                  // never judge a short run
 
-  const latest = rows[rows.length - 1];
-  $("#st-today").textContent =
-    `avg ${latest.stressAvg}${latest.stressQualifier && latest.stressQualifier !== "UNKNOWN"
-      ? ` · ${latest.stressQualifier.toLowerCase()}` : ""}`;
+  // 7-day rolling mean — a single day is noise, not signal.
+  const rolled = all.map((h, i) => {
+    const w = all.slice(Math.max(0, i - 6), i + 1);
+    return { date: h.date, avg: w.reduce((s, x) => s + x.stressAvg, 0) / w.length };
+  }).slice(-TREND_DAYS);
 
-  // Day composition — proportional, labelled, never colour-alone.
-  const total = STRESS_BANDS.reduce((s, b) => s + (latest[b.key] || 0), 0);
-  $("#st-bands").innerHTML = total
-    ? STRESS_BANDS.map(b => {
-        const m = latest[b.key] || 0;
-        if (!m) return "";
-        const pct = (m / total) * 100;
-        return `<div class="st-seg ${b.cls}" style="width:${pct}%" title="${b.label}: ${Math.round(m / 60 * 10) / 10}h">
-          ${pct > 12 ? `<span>${b.label}<small>${(m / 60).toFixed(1)}h</small></span>` : ""}
-        </div>`;
-      }).join("")
-    : "";
+  const baseline = all.reduce((s, h) => s + h.stressAvg, 0) / all.length;
+  const recent = rolled[rolled.length - 1].avg;
+  const delta = recent - baseline;
 
-  barChart($("#ch-rest"), rows, {
+  $("#st-today").textContent = Math.abs(delta) < 1.5
+    ? "in line with your baseline"
+    : `${delta > 0 ? "+" : ""}${delta.toFixed(0)} vs your baseline`;
+
+  lineChart($("#ch-stress"), rolled, {
+    value: r => r.avg,
+    fmtValue: v => v.toFixed(0),
+  });
+
+  // Hours at rest is the better-behaved half of this data — it's a duration,
+  // not a proprietary score — so it stays, framed as recovery time.
+  barChart($("#ch-rest"), all.slice(-TREND_DAYS), {
     value: h => h.restMin != null ? h.restMin / 60 : null,
     fmtValue: v => `${v.toFixed(1)}h`,
   });
-  lineChart($("#ch-stress"), rows, {
-    value: h => h.stressAvg,
-    fmtValue: v => `${Math.round(v)}`,
-  });
 
-  const stressful = rows.filter(h => h.stressQualifier === "STRESSFUL").length;
-  const rated = rows.filter(h => h.stressQualifier && h.stressQualifier !== "UNKNOWN").length;
-  const avgRest = rows.reduce((s, h) => s + (h.restMin || 0), 0) / rows.length / 60;
-  const avgHigh = rows.reduce((s, h) => s + (h.highMin || 0), 0) / rows.length / 60;
+  const avgRest = all.reduce((s, h) => s + (h.restMin || 0), 0) / all.length / 60;
+  $("#st-read").innerHTML =
+    `Averaging ${avgRest.toFixed(1)}h a day where your heart rate variability looks settled.` +
+    (all.length < 25 ? ` Building history — ${all.length} days so far.` : "");
 
-  const bits = [`Averaging ${avgRest.toFixed(1)}h at rest and ${avgHigh.toFixed(1)}h in the high band per day.`];
-  if (rated >= 3) bits.push(`Garmin rated <em>${stressful} of ${rated}</em> days "stressful".`);
-  if (rows.length < 25) bits.push(`Building history — ${rows.length} days so far, backfilling a few each sync.`);
-  $("#st-read").innerHTML = bits.join(" ");
+  // Collapsible, and it remembers. If this reads as pressure rather than
+  // information, it should be possible to shut it permanently.
+  const toggle = $("#st-toggle");
+  const body = $("#st-body");
+  const apply = collapsed => {
+    body.hidden = collapsed;
+    toggle.textContent = collapsed ? "show" : "hide";
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+  };
+  apply(localStorage.getItem(STRESS_COLLAPSE_KEY) === "1");
+  toggle.onclick = () => {
+    const next = !body.hidden;
+    localStorage.setItem(STRESS_COLLAPSE_KEY, next ? "1" : "0");
+    apply(next);
+  };
 
   card.hidden = false;
 }
@@ -721,7 +750,10 @@ function renderTrends(fullHistory) {
   const pill = (id, text) => { const el = $("#" + id); if (el && text) el.textContent = text; };
 
   const sleepGoal = CONFIG.goals?.sleepHours ?? null;
-  const stepGoal = history.find(h => h.stepGoal)?.stepGoal ?? CONFIG.goals?.dailySteps ?? null;
+  // His own target wins over the one Garmin ships (9,000). A self-chosen goal
+  // outperforms an assigned one on adherence, and the watch's default is the
+  // number he was missing three days in four.
+  const stepGoal = CONFIG.goals?.dailySteps ?? history.find(h => h.stepGoal)?.stepGoal ?? null;
 
   const aSleep = avg("sleepHours"), aSteps = avg("steps"), aRhr = avg("restingHR"), aBb = avg("bodyBatteryPeak");
   pill("f-sleep-avg", aSleep && `${aSleep.toFixed(1)}h avg · 30d`);

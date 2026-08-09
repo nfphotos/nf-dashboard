@@ -18,7 +18,15 @@ window.CONFIG = {
   // >>> EDIT THESE to your real targets <<<
   goals: {
     weeklyRuns: 3,
-    dailySteps: 9000,
+    // 7,000, not 9,000 or 10,000. Two reasons, both evidence-led:
+    //   · The dose-response literature puts the inflection around 7,000/day —
+    //     ≥7,000 vs <7,000 is where the association with lower depression risk
+    //     sits (RR 0.69, 33 studies, 96,173 adults), and it plateaus by ~7,500.
+    //   · A goal you miss 77% of the time is worse than no goal: repeated
+    //     failure against a threshold predicts abandonment, not effort.
+    // Nick's 90-day average is 6,874 — so this is a target he'll meet about
+    // half the time, which is the range where goals actually motivate.
+    dailySteps: 7000,
     sleepHours: 7.5,
     bodyweightKg: 78,        // current — for the trend later
     bodyweightTargetKg: 75

@@ -127,17 +127,28 @@
       </article>
 
       <article class="card chart-card" id="stress-card" hidden>
-        <h3>Stress &amp; recovery <span class="pill" id="st-today">—</span></h3>
-        <div class="st-bands" id="st-bands"></div>
-        <small class="muted st-cap">Today — how the day split across Garmin's stress bands</small>
+        <h3>Autonomic load
+          <span class="pill" id="st-today">—</span>
+          <button class="mini-btn st-toggle" id="st-toggle" aria-expanded="true">hide</button>
+        </h3>
+        <div id="st-body">
+          <div class="st-sub">Settled hours per day</div>
+          <div class="chart" id="ch-rest"></div>
 
-        <div class="st-sub">Hours genuinely at rest</div>
-        <div class="chart" id="ch-rest"></div>
+          <div class="st-sub">7-day rolling average, vs your own baseline</div>
+          <div class="chart" id="ch-stress"></div>
 
-        <div class="st-sub">Average stress</div>
-        <div class="chart" id="ch-stress"></div>
+          <p class="md-read" id="st-read"></p>
 
-        <p class="md-read" id="st-read"></p>
+          <p class="st-caveat">
+            This is Garmin's heart-rate-variability estimate, not a measure of how
+            stressed you feel. In a study of 781 people it explained almost none of
+            the variation in reported stress, and it rises the same way for
+            excitement as for pressure. Heat, caffeine, alcohol, illness and
+            carrying gear all push it up. Useful as a trend over weeks — not as a
+            verdict on a day.
+          </p>
+        </div>
       </article>
 
       <article class="card chart-card" id="weekday-card" hidden>
