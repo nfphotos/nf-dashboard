@@ -61,6 +61,29 @@
           <small class="rb-source" id="rb-source"></small>
         </div>
       </div>
+      <article class="card whatchanged" id="changed-card" hidden>
+        <h3>Today <span class="pill" id="wc-state">—</span></h3>
+        <p class="wc-line" id="wc-line"></p>
+      </article>
+
+      <article class="card checkin" id="checkin-card">
+        <h3>How was today? <span class="pill" id="ci-coverage">—</span></h3>
+        <p class="ci-context" id="ci-context"></p>
+        <div class="ci-block">
+          <small>Energy</small>
+          <div class="ci-scale" data-field="energy"></div>
+        </div>
+        <div class="ci-block">
+          <small>Body</small>
+          <div class="ci-scale" data-field="body"></div>
+        </div>
+        <input class="ci-note" id="ci-note" placeholder="One line, if you want — “big edit day”, “felt rough”" />
+        <div class="ci-foot">
+          <small class="muted" id="ci-saved">Not logged yet</small>
+          <button class="mini-btn" id="ci-export">Export data</button>
+        </div>
+      </article>
+
       <article class="card tonight" id="tonight-card" hidden>
         <h3>Tonight <span class="pill" id="tn-debt">—</span></h3>
         <div class="tn-row">
@@ -83,7 +106,7 @@
       </article>
 
       <article class="card">
-        <h3>Daily streaks <span class="pill">don't break the chain</span></h3>
+        <h3>Habits <span class="pill">last 30 days</span></h3>
         <div class="streaks" id="streaks"></div>
       </article>
 
@@ -149,6 +172,15 @@
             verdict on a day.
           </p>
         </div>
+      </article>
+
+      <article class="card" id="regularity-card" hidden>
+        <h3>Sleep regularity <span class="pill" id="sr-band">—</span></h3>
+        <div class="sr-head">
+          <div class="big" id="sr-value">—</div>
+          <small id="sr-sub">typical drift in when you sleep</small>
+        </div>
+        <p class="md-read" id="sr-read"></p>
       </article>
 
       <article class="card chart-card" id="weekday-card" hidden>

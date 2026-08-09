@@ -215,6 +215,226 @@ function attachTooltip(el) {
   });
 }
 
+/* =====================================================================
+   PERSONAL BASELINE — the spine of the whole dashboard.
+
+   No invented composite score. A review of 14 readiness/recovery scores
+   across 10 manufacturers found none disclosed their weighting and none
+   were validated, so adding a fifteenth on top of Garmin's noisy HRV
+   would just be more unfalsifiable arithmetic.
+
+   Instead: is today normal FOR HIM, or not. Median and IQR over a
+   trailing window, and a metric only speaks when it leaves the band.
+   ===================================================================== */
+const BASELINE_DAYS = 60;
+
+function quantile(sorted, q) {
+  if (!sorted.length) return null;
+  const pos = (sorted.length - 1) * q, base = Math.floor(pos), rest = pos - base;
+  return sorted[base + 1] !== undefined
+    ? sorted[base] + rest * (sorted[base + 1] - sorted[base])
+    : sorted[base];
+}
+
+/** Median + interquartile band for a metric, excluding today. */
+function baselineFor(history, key, excludeDate) {
+  const vals = history
+    .filter(h => h.date !== excludeDate && h[key] != null)
+    .slice(-BASELINE_DAYS)
+    .map(h => h[key])
+    .sort((a, b) => a - b);
+  if (vals.length < 14) return null;         // too little to call anything normal
+  return { median: quantile(vals, 0.5), lo: quantile(vals, 0.25), hi: quantile(vals, 0.75), n: vals.length };
+}
+
+/* ---------- "What changed" — and, most days, nothing -----------------
+   A dashboard that is quiet most of the time gets believed when it does
+   speak. Scores pinned at one end for weeks, and insight cards that fire
+   on ordinary days, are the two most-resented patterns in this market.
+--------------------------------------------------------------------- */
+const CHANGE_METRICS = [
+  { key: "sleepHours",      label: "Sleep",        unit: "h",   fmt: v => `${v.toFixed(1)}h`, dp: 1 },
+  { key: "restingHR",       label: "Resting HR",   unit: " bpm", fmt: v => `${Math.round(v)} bpm`, dp: 0 },
+  { key: "steps",           label: "Steps",        unit: "",    fmt: v => fmt.format(Math.round(v)), dp: 0 },
+  { key: "bodyBatteryPeak", label: "Body Battery", unit: "",    fmt: v => `${Math.round(v)}`, dp: 0 },
+];
+
+function renderWhatChanged(history) {
+  const card = $("#changed-card");
+  if (!card || !Array.isArray(history) || history.length < 20) return;
+
+  const today = history[history.length - 1];
+  if (!today) return;
+
+  const notable = [];
+  for (const m of CHANGE_METRICS) {
+    const v = today[m.key];
+    if (v == null) continue;
+    const b = baselineFor(history, m.key, today.date);
+    if (!b) continue;
+    if (v < b.lo || v > b.hi) {
+      const diff = v - b.median;
+      notable.push({ ...m, v, median: b.median, diff, size: Math.abs(diff) / (b.hi - b.lo || 1) });
+    }
+  }
+
+  if (!notable.length) {
+    $("#wc-state").textContent = "nothing to flag";
+    $("#wc-line").textContent =
+      "Everything sitting inside your normal range for the last two months.";
+    card.hidden = false;
+    return;
+  }
+
+  notable.sort((a, b) => b.size - a.size);
+  const say = notable.slice(0, 2).map(n => {
+    const dir = n.diff > 0 ? "above" : "below";
+    const mag = n.dp ? Math.abs(n.diff).toFixed(n.dp) : fmt.format(Math.round(Math.abs(n.diff)));
+    return `${n.label} ${n.fmt(n.v)}, ${mag}${n.unit} ${dir} your usual ${n.fmt(n.median)}`;
+  });
+
+  $("#wc-state").textContent = `${notable.length} outside normal`;
+  // Task-level and factual. No "you missed", no praise, no exclamation marks:
+  // feedback that turns attention to the self degrades performance about a
+  // third of the time (Kluger & DeNisi, 607 effect sizes).
+  $("#wc-line").textContent = say.join(". ") + ".";
+  card.hidden = false;
+}
+
+/* ---------- Sleep regularity ----------------------------------------
+   The strongest-evidenced sleep construct available, and the one his data
+   actually speaks to: regular sleepers had ~38% lower incident depression
+   and ~33% lower anxiety than irregular ones (n=79,666, ~7.5y follow-up),
+   and — the part that matters here — irregular sleepers who DID meet
+   duration guidelines still carried ~48% higher depression risk. His 7.3h
+   average doesn't buy him out of a three-hour wake swing.
+
+   Proper SRI needs epoch-by-epoch data. Sleep-midpoint drift over 14 days
+   is the honest proxy from what Garmin gives us, and it's the thing he can
+   actually move. Observational evidence — association, not proof.
+--------------------------------------------------------------------- */
+function renderRegularity(history) {
+  const card = $("#regularity-card");
+  if (!card || !Array.isArray(history)) return;
+
+  const nights = history.filter(h => h.bedMin != null && h.wakeMin != null).slice(-14);
+  if (nights.length < 7) return;
+
+  // Midpoint of each night, on the 18:00-anchored axis so a 00:30 bedtime
+  // sits after 23:00 rather than 23.5 hours before it.
+  const mids = nights.map(h => {
+    const bed = (h.bedMin - 18 * 60 + 1440) % 1440;
+    let wake = (h.wakeMin - 18 * 60 + 1440) % 1440;
+    if (wake < bed) wake += 1440;
+    return (bed + (wake - bed) / 2) % 1440;
+  });
+
+  const mean = mids.reduce((a, b) => a + b, 0) / mids.length;
+  const sd = Math.sqrt(mids.reduce((s, m) => s + (m - mean) ** 2, 0) / mids.length);
+  const hours = sd / 60;
+
+  const band = hours <= 0.5 ? "very consistent"
+    : hours <= 1 ? "consistent"
+    : hours <= 1.5 ? "moderately variable"
+    : "variable";
+
+  $("#sr-value").textContent = `±${hours.toFixed(1)}h`;
+  $("#sr-band").textContent = band;
+  $("#sr-sub").textContent = `drift in your sleep midpoint · last ${nights.length} nights`;
+
+  const wakes = nights.map(h => h.wakeMin).sort((a, b) => a - b);
+  const spread = (wakes[wakes.length - 1] - wakes[0]) / 60;
+  $("#sr-read").innerHTML =
+    `Your bedtime barely moves, so this is almost entirely wake time — a ${spread.toFixed(1)}h range across these nights. ` +
+    `Regularity tracks better with mood and long-term health than total hours do, and hitting 7-9h doesn't offset an irregular schedule. ` +
+    `<em>Observational evidence — an association, not a proven cause.</em>`;
+
+  card.hidden = false;
+}
+
+/* ---------- Evening check-in ----------------------------------------
+   The watch cannot measure how he actually feels: across 39 people over
+   three months, self-reported stress had no association with overnight
+   HRV, and feeling energised went with LOWER HRV. A 56-study review found
+   subjective and objective wellbeing measures generally don't correlate,
+   with the subjective ones tracking load better. So this is an
+   independent signal, not a soft copy of the Garmin data.
+
+   Five verbally-anchored levels (reliability plateaus around 5-7 and raw
+   numeric sliders do worse), two items only — item count is what kills
+   completion, not prompt count — and the day replayed back first, which
+   raised completion by ~28 points versus in-the-moment logging.
+--------------------------------------------------------------------- */
+const CHECKIN_KEY = "nf.checkins";
+const SCALES = {
+  energy: ["Drained", "Low", "OK", "Good", "Firing"],
+  body:   ["Sore/rough", "Stiff", "Fine", "Strong", "Great"],
+};
+
+const loadCheckins = () => { try { return JSON.parse(localStorage.getItem(CHECKIN_KEY)) || {}; } catch { return {}; } };
+const saveCheckins = c => localStorage.setItem(CHECKIN_KEY, JSON.stringify(c));
+
+function renderCheckin(history, calendar) {
+  const card = $("#checkin-card"); if (!card) return;
+  const today = todayISO();
+  const all = loadCheckins();
+  const entry = all[today] || {};
+
+  // Replay the day back before asking him to rate it.
+  const day = (history || []).find(h => h.date === today);
+  const fixture = ((calendar && calendar.past) || []).concat((calendar && calendar.matches) || [])
+    .find(m => (m.start || "").slice(0, 10) === today);
+  const ctx = [];
+  if (fixture) ctx.push(fixture.title.trim());
+  if (day?.steps != null) ctx.push(`${fmt.format(day.steps)} steps`);
+  if (day?.sleepHours != null) ctx.push(`${day.sleepHours}h sleep`);
+  $("#ci-context").textContent = ctx.length ? ctx.join(" · ") : "";
+
+  card.querySelectorAll(".ci-scale").forEach(el => {
+    const field = el.dataset.field;
+    el.innerHTML = SCALES[field].map((label, i) =>
+      `<button class="ci-opt ${entry[field] === i + 1 ? "on" : ""}" data-field="${field}" data-v="${i + 1}">${label}</button>`
+    ).join("");
+    el.querySelectorAll(".ci-opt").forEach(b => b.addEventListener("click", () => {
+      const c = loadCheckins();
+      c[today] = { ...(c[today] || {}), [b.dataset.field]: Number(b.dataset.v), at: Date.now() };
+      saveCheckins(c);
+      renderCheckin(history, calendar);
+    }));
+  });
+
+  const note = $("#ci-note");
+  note.value = entry.note || "";
+  note.onchange = () => {
+    const c = loadCheckins();
+    c[today] = { ...(c[today] || {}), note: note.value.trim(), at: Date.now() };
+    saveCheckins(c);
+  };
+
+  const done = entry.energy != null || entry.body != null;
+  $("#ci-saved").textContent = done ? "Saved for today" : "Not logged yet";
+
+  const logged = Object.keys(all).filter(d => {
+    const age = (Date.now() - new Date(d + "T00:00:00Z")) / 864e5;
+    return age >= 0 && age < 30;
+  }).length;
+  $("#ci-coverage").textContent = logged ? `${logged} of last 30 days` : "new";
+
+  // Browser storage can be evicted with no warning, and losing months of
+  // logs is a documented way projects like this die. One tap, whole file.
+  $("#ci-export").onclick = () => {
+    const blob = new Blob([JSON.stringify({
+      checkins: loadCheckins(), gym: loadGym(), habits: loadH(),
+      exported: new Date().toISOString(),
+    }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `nf-dashboard-backup-${today}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+}
+
 /* ---------- Stress & recovery ----------------------------------------
    The one stream that speaks to mental load rather than movement, and it
    was going unused. Garmin's bands are 0-25 rest, 26-50 low, 51-75
@@ -901,13 +1121,31 @@ function toggleHabit(id) {
   h[id] = cur; saveH(h); renderStreaks(); renderBriefing(); syncDoneBtn(); renderProgress();
 }
 const markHabitDone = id => { if (!habitDoneToday(id)) toggleHabit(id); };
+/** Coverage, not chains.
+ *
+ *  A streak that resets to zero punishes the one missed day and makes the
+ *  next one feel pointless — rigid daily targets produced FEWER gym visits
+ *  than flexible ones in a 2021 Management Science trial, during and after.
+ *  A count over a window degrades gracefully: miss a day and you go from
+ *  22/30 to 22/30, not from 47 to 0. */
+const COVERAGE_WINDOW = 30;
+
+function coverageCount(habitId) {
+  const log = (loadH()[habitId] || {}).log || {};
+  let n = 0;
+  for (let i = 0; i < COVERAGE_WINDOW; i++) {
+    if (log[dayStr(new Date(Date.now() - i * 864e5))]) n++;
+  }
+  return n;
+}
+
 function renderStreaks() {
-  const h = loadH();
   $("#streaks").innerHTML = (CONFIG.habits || []).map(hb => {
-    const s = h[hb.id] || { streak: 0 }; const done = habitDoneToday(hb.id);
+    const done = habitDoneToday(hb.id);
+    const n = coverageCount(hb.id);
     return `<button class="streak ${done ? "done" : ""}" data-habit="${hb.id}">
       <span class="s-icon">${hb.icon}</span><span class="s-label">${hb.label}</span>
-      <span class="s-count">${s.streak || 0}🔥</span>
+      <span class="s-count">${n}<small>/${COVERAGE_WINDOW}</small></span>
       <span class="s-tick">${done ? "✓ today" : "tap to log"}</span></button>`;
   }).join("");
 }
@@ -1075,6 +1313,9 @@ async function boot() {
   window._gear = gear; renderGear(gear);
   renderSessions();
   renderStress(g?.history);
+  renderWhatChanged(g?.history);
+  renderRegularity(g?.history);
+  renderCheckin(g?.history, cal);
   renderTonight(g?.history, cal);
   renderWeekday(g?.history);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data
