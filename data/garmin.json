@@ -680,7 +680,17 @@
       "sleepHours": 7.0,
       "bedMin": 1431,
       "wakeMin": 442,
-      "bodyBatteryPeak": 28
+      "bodyBatteryPeak": 28,
+      "stressAvg": 67,
+      "stressMax": 99,
+      "restMin": 247,
+      "lowMin": 105,
+      "medMin": 41,
+      "highMin": 605,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 153,
+      "intensityVigorous": 2,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-18",
@@ -690,7 +700,17 @@
       "sleepHours": 8.3,
       "bedMin": 1420,
       "wakeMin": 479,
-      "bodyBatteryPeak": 40
+      "bodyBatteryPeak": 40,
+      "stressAvg": 63,
+      "stressMax": 99,
+      "restMin": 290,
+      "lowMin": 94,
+      "medMin": 105,
+      "highMin": 612,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 96,
+      "intensityVigorous": 1,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-19",
@@ -700,7 +720,17 @@
       "sleepHours": 8.5,
       "bedMin": 1425,
       "wakeMin": 529,
-      "bodyBatteryPeak": 7
+      "bodyBatteryPeak": 7,
+      "stressAvg": 72,
+      "stressMax": 96,
+      "restMin": 4,
+      "lowMin": 154,
+      "medMin": 440,
+      "highMin": 642,
+      "stressQualifier": "VERY_STRESSFUL",
+      "intensityModerate": 0,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-20",
@@ -710,7 +740,17 @@
       "sleepHours": 7.8,
       "bedMin": 1378,
       "wakeMin": 463,
-      "bodyBatteryPeak": 62
+      "bodyBatteryPeak": 62,
+      "stressAvg": 55,
+      "stressMax": 99,
+      "restMin": 356,
+      "lowMin": 66,
+      "medMin": 310,
+      "highMin": 381,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 74,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-21",
@@ -720,7 +760,17 @@
       "sleepHours": 6.7,
       "bedMin": 1,
       "wakeMin": 443,
-      "bodyBatteryPeak": 35
+      "bodyBatteryPeak": 35,
+      "stressAvg": 59,
+      "stressMax": 97,
+      "restMin": 216,
+      "lowMin": 144,
+      "medMin": 224,
+      "highMin": 446,
+      "stressQualifier": "VERY_STRESSFUL",
+      "intensityModerate": 23,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-22",
@@ -730,7 +780,17 @@
       "sleepHours": 8.4,
       "bedMin": 1396,
       "wakeMin": 463,
-      "bodyBatteryPeak": 32
+      "bodyBatteryPeak": 32,
+      "stressAvg": 56,
+      "stressMax": 99,
+      "restMin": 286,
+      "lowMin": 130,
+      "medMin": 305,
+      "highMin": 362,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 104,
+      "intensityVigorous": 1,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-23",
@@ -740,7 +800,17 @@
       "sleepHours": 9.1,
       "bedMin": 1325,
       "wakeMin": 455,
-      "bodyBatteryPeak": 49
+      "bodyBatteryPeak": 49,
+      "stressAvg": 56,
+      "stressMax": 95,
+      "restMin": 364,
+      "lowMin": 55,
+      "medMin": 239,
+      "highMin": 473,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 13,
+      "intensityVigorous": 2,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-24",
@@ -750,7 +820,17 @@
       "sleepHours": 8.4,
       "bedMin": 1384,
       "wakeMin": 448,
-      "bodyBatteryPeak": 40
+      "bodyBatteryPeak": 40,
+      "stressAvg": 55,
+      "stressMax": 97,
+      "restMin": 395,
+      "lowMin": 91,
+      "medMin": 299,
+      "highMin": 433,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 8,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-25",
@@ -760,7 +840,17 @@
       "sleepHours": 9.3,
       "bedMin": 1,
       "wakeMin": 562,
-      "bodyBatteryPeak": 72
+      "bodyBatteryPeak": 72,
+      "stressAvg": 43,
+      "stressMax": 98,
+      "restMin": 562,
+      "lowMin": 78,
+      "medMin": 270,
+      "highMin": 266,
+      "stressQualifier": "BALANCED",
+      "intensityModerate": 0,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-26",
@@ -770,7 +860,17 @@
       "sleepHours": 7.9,
       "bedMin": 1428,
       "wakeMin": 513,
-      "bodyBatteryPeak": 68
+      "bodyBatteryPeak": 68,
+      "stressAvg": 52,
+      "stressMax": 97,
+      "restMin": 460,
+      "lowMin": 39,
+      "medMin": 154,
+      "highMin": 450,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 11,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-27",
@@ -780,7 +880,17 @@
       "sleepHours": 5.7,
       "bedMin": 1406,
       "wakeMin": 307,
-      "bodyBatteryPeak": 51
+      "bodyBatteryPeak": 51,
+      "stressAvg": 47,
+      "stressMax": 96,
+      "restMin": 427,
+      "lowMin": 128,
+      "medMin": 328,
+      "highMin": 239,
+      "stressQualifier": "STRESSFUL",
+      "intensityModerate": 7,
+      "intensityVigorous": 1,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-28",
@@ -790,7 +900,17 @@
       "sleepHours": 5.0,
       "bedMin": 1437,
       "wakeMin": 312,
-      "bodyBatteryPeak": 39
+      "bodyBatteryPeak": 39,
+      "stressAvg": 56,
+      "stressMax": 98,
+      "restMin": 267,
+      "lowMin": 226,
+      "medMin": 343,
+      "highMin": 345,
+      "stressQualifier": "VERY_STRESSFUL",
+      "intensityModerate": 23,
+      "intensityVigorous": 0,
+      "intensityGoal": 150
     },
     {
       "date": "2026-07-29",
