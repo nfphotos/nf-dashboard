@@ -110,10 +110,22 @@
         <small class="muted">How charged you actually got each day.</small>
       </article>
 
+      <article class="card" id="matchday-card" hidden>
+        <h3>What a matchday costs <span class="pill" id="md-n">—</span></h3>
+        <div id="md-table"></div>
+        <p class="md-read" id="md-read"></p>
+      </article>
+
+      <article class="card">
+        <h3>Log a session <span class="pill" id="log-week">—</span></h3>
+        <div class="session-grid" id="session-grid"></div>
+        <ul class="list" id="session-log"></ul>
+        <small class="muted">Two taps. Saved on this device — the watch never sees it.</small>
+      </article>
+
       <article class="card">
         <h3>Today's garage-gym session <span class="pill" id="f-session-pill">auto</span></h3>
         <div id="f-workout" class="workout">—</div>
-        <button class="action-btn" id="f-done-btn">Mark session done 💪</button>
       </article>
     </section>
 

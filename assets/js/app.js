@@ -211,6 +211,140 @@ function attachTooltip(el) {
   });
 }
 
+/* ---------- Matchday impact ------------------------------------------
+   The one thing this app can do that nothing else can: it holds both the
+   fixture list and the body data. Compare shoot days, the day after, and
+   ordinary days. Presented as a table on purpose — four metrics across
+   three groups is a comparison to read, not a shape to see.
+--------------------------------------------------------------------- */
+const METRICS = [
+  { key: "sleepHours",      label: "Sleep",         fmt: v => `${v.toFixed(1)}h`,             better: "high" },
+  { key: "steps",           label: "Steps",         fmt: v => fmt.format(Math.round(v)),      better: "high" },
+  { key: "restingHR",       label: "Resting HR",    fmt: v => `${Math.round(v)}`,             better: "low"  },
+  { key: "bodyBatteryPeak", label: "Body Battery",  fmt: v => `${Math.round(v)}`,             better: "high" },
+];
+
+// All UTC. Parsing as local midnight and formatting with toISOString() shifts
+// back by Malta's offset and returns the SAME date — which silently made every
+// "day after" collide with its own matchday and emptied the group.
+const nextDay = iso => {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
+function renderMatchday(history, calendar) {
+  const card = $("#matchday-card");
+  if (!card || !Array.isArray(history) || !history.length) return;
+
+  const past = (calendar && calendar.past) || [];
+  if (!past.length) return;
+
+  const byDate = Object.fromEntries(history.map(h => [h.date, h]));
+  const matchDays = new Set(past.map(m => (m.start || "").slice(0, 10)).filter(Boolean));
+  const afterDays = new Set([...matchDays].map(nextDay));
+
+  const groups = [
+    { name: "Matchday",  rows: [...matchDays].filter(d => byDate[d]).map(d => byDate[d]) },
+    { name: "Day after", rows: [...afterDays].filter(d => byDate[d] && !matchDays.has(d)).map(d => byDate[d]) },
+    { name: "Ordinary",  rows: history.filter(h => !matchDays.has(h.date) && !afterDays.has(h.date)) },
+  ];
+
+  // Too few shoots to say anything honest yet.
+  if (groups[0].rows.length < 4) return;
+
+  const mean = (rows, key) => {
+    const v = rows.map(r => r[key]).filter(x => x != null);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
+
+  const head = `<tr><th></th>${groups.map(g => `<th>${g.name}<small>${g.rows.length}d</small></th>`).join("")}</tr>`;
+  const body = METRICS.map(m => {
+    const vals = groups.map(g => mean(g.rows, m.key));
+    if (vals.every(v => v == null)) return "";
+    // Mark the worst of the three, so the eye lands on the cost.
+    const present = vals.filter(v => v != null);
+    const worst = m.better === "low" ? Math.max(...present) : Math.min(...present);
+    return `<tr><th>${m.label}</th>${vals.map(v =>
+      v == null ? "<td>—</td>"
+        : `<td class="${v === worst ? "md-worst" : ""}">${m.fmt(v)}</td>`).join("")}</tr>`;
+  }).join("");
+
+  $("#md-table").innerHTML = `<table class="md">${head}${body}</table>`;
+  $("#md-n").textContent = `${groups[0].rows.length} shoots · last 90 days`;
+
+  // Plain-language read-out, generated from the numbers rather than asserted.
+  const say = [];
+  const mSleep = mean(groups[0].rows, "sleepHours"), oSleep = mean(groups[2].rows, "sleepHours");
+  const aHR = mean(groups[1].rows, "restingHR"), oHR = mean(groups[2].rows, "restingHR");
+  const aBB = mean(groups[1].rows, "bodyBatteryPeak"), oBB = mean(groups[2].rows, "bodyBatteryPeak");
+
+  if (mSleep != null && oSleep != null && mSleep >= oSleep) {
+    say.push(`Shoot days don't cost you sleep — you average ${mSleep.toFixed(1)}h on them, ${(mSleep - oSleep).toFixed(1)}h more than an ordinary day.`);
+  }
+  if (aHR != null && oHR != null && aHR > oHR + 0.5) {
+    say.push(`The day <em>after</em> is where it shows: resting HR ${Math.round(aHR)} vs ${Math.round(oHR)}${aBB != null && oBB != null && aBB < oBB ? `, Body Battery ${Math.round(aBB)} vs ${Math.round(oBB)}` : ""}.`);
+  }
+  $("#md-read").innerHTML = say.join(" ");
+  card.hidden = false;
+}
+
+/* ---------- Session logger -------------------------------------------
+   He doesn't record activities on the watch, so nothing else captures
+   what he actually trains. Two taps, stored locally, no nagging.
+--------------------------------------------------------------------- */
+const SESSION_TYPES = [
+  { id: "push",   label: "Push",         icon: "🏋️" },
+  { id: "pull",   label: "Pull",         icon: "🧗" },
+  { id: "legs",   label: "Legs",         icon: "🦵" },
+  { id: "full",   label: "Full body",    icon: "💪" },
+  { id: "cardio", label: "Run / walk",   icon: "🏃" },
+  { id: "mobility", label: "Mobility",   icon: "🧘" },
+];
+const SESSION_KEY = "nf.sessions";
+
+const loadSessions = () => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)) || []; } catch { return []; } };
+const saveSessions = s => localStorage.setItem(SESSION_KEY, JSON.stringify(s.slice(-200)));
+
+function logSession(typeId) {
+  const s = loadSessions();
+  s.push({ date: new Date().toISOString().slice(0, 10), type: typeId, at: Date.now() });
+  saveSessions(s);
+  markHabitDone("move");          // keeps the existing Move streak honest
+  renderSessions();
+}
+
+function removeSession(at) {
+  saveSessions(loadSessions().filter(x => x.at !== at));
+  renderSessions();
+}
+
+function renderSessions() {
+  const grid = $("#session-grid"); if (!grid) return;
+  const sessions = loadSessions();
+
+  grid.innerHTML = SESSION_TYPES.map(t =>
+    `<button class="session-btn" data-type="${t.id}"><span>${t.icon}</span>${t.label}</button>`).join("");
+  grid.querySelectorAll(".session-btn").forEach(b =>
+    b.addEventListener("click", () => logSession(b.dataset.type)));
+
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const thisWeek = sessions.filter(s => new Date(s.date + "T00:00:00") >= weekAgo).length;
+  $("#log-week").textContent = thisWeek === 0 ? "none this week" : `${thisWeek} this week`;
+
+  const recent = sessions.slice(-8).reverse();
+  $("#session-log").innerHTML = recent.length
+    ? recent.map(s => {
+        const t = SESSION_TYPES.find(x => x.id === s.type) || { label: s.type, icon: "•" };
+        return `<li><span class="lead">${t.icon} ${t.label}</span>
+          <span class="right">${shortDate(s.date)}
+          <button class="mini-x" data-at="${s.at}" aria-label="Remove">✕</button></span></li>`;
+      }).join("")
+    : '<li class="muted">Nothing logged yet.</li>';
+  $("#session-log").querySelectorAll(".mini-x").forEach(b =>
+    b.addEventListener("click", () => removeSession(Number(b.dataset.at))));
+}
+
 function renderTrends(history) {
   if (!Array.isArray(history) || !history.length) return;
 
@@ -398,13 +532,9 @@ function renderBriefing() {
   $("#brief-list").innerHTML = items.join("");
 }
 
-/* ---- Mark workout done -> feeds "move" streak ---- */
-function syncDoneBtn() {
-  const b = $("#f-done-btn"); if (!b) return;
-  if (habitDoneToday("move")) { b.textContent = "Logged ✓ today"; b.classList.add("done"); }
-  else { b.textContent = "Mark session done 💪"; b.classList.remove("done"); }
-}
-$("#f-done-btn").addEventListener("click", () => markHabitDone("move"));
+/* ---- The old single "mark done" button is replaced by the session logger,
+       which records WHAT was done rather than just that something was. ---- */
+function syncDoneBtn() { /* element removed — kept as a no-op for callers */ }
 
 /* =====================================================================
    GOALS & PROGRESS — bodyweight trend, lift PRs, streak history
@@ -545,6 +675,8 @@ async function boot() {
   ]);
   renderGarmin(g); renderPhoto(p); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
+  renderSessions();
+  renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data
   renderBriefing();   // after readiness + fixture are populated
   if (meta?.lastSync) $("#last-sync").textContent = "Last sync: " +
     new Date(meta.lastSync).toLocaleString("en-GB", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });

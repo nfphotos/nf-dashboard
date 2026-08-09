@@ -202,12 +202,21 @@ def build_history(api, today):
 
     # Daily Body Battery peak — "how charged did I actually get today".
     # The intraday array is only ~6 points a day for this watch, far too coarse
-    # to draw as a curve, but its daily maximum is a genuine 30-point trend.
-    for row in safe(api.get_body_battery, s, e, default=[]) or []:
-        d = row.get("date")
-        vals = [v[1] for v in (row.get("bodyBatteryValuesArray") or []) if v and v[1] is not None]
-        if d and vals:
-            slot(d)["bodyBatteryPeak"] = max(vals)
+    # to draw as a curve, but its daily maximum is a genuine trend.
+    #
+    # This endpoint silently returns [] for ranges wider than about a month:
+    # asking for 90 days at once yielded ZERO rows, which reads as "no data"
+    # rather than "you asked for too much". Request it in 28-day chunks.
+    chunk_start = start
+    while chunk_start <= end:
+        chunk_end = min(chunk_start + datetime.timedelta(days=27), end)
+        for row in safe(api.get_body_battery, chunk_start.isoformat(),
+                        chunk_end.isoformat(), default=[]) or []:
+            d = row.get("date")
+            vals = [v[1] for v in (row.get("bodyBatteryValuesArray") or []) if v and v[1] is not None]
+            if d and vals:
+                slot(d)["bodyBatteryPeak"] = max(vals)
+        chunk_start = chunk_end + datetime.timedelta(days=1)
 
     return [days[k] for k in sorted(days)]
 

@@ -260,3 +260,34 @@ main{padding:14px 12px 30px}
   pointer-events:none; z-index:5;
 }
 .ch-tip[hidden]{ display:none; }
+
+/* ---------- Matchday impact table -------------------------------- */
+table.md{ width:100%; border-collapse:collapse; margin-top:4px; font-size:13px; }
+table.md th, table.md td{ padding:7px 4px; text-align:right; border-bottom:1px solid var(--line-soft); }
+table.md tr th:first-child{ text-align:left; color:var(--ink-dim); font-weight:500; }
+table.md tr:first-child th{ color:var(--ink-dim); font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.04em; border-bottom-color:var(--line); }
+table.md tr:first-child th small{ display:block; color:var(--muted); font-size:10px;
+  text-transform:none; letter-spacing:0; font-weight:400; }
+table.md td{ color:var(--ink); font-variant-numeric:tabular-nums; }
+table.md td.md-worst{ color:var(--amber); font-weight:600; }
+.md-read{ margin:10px 0 0; color:var(--ink-dim); font-size:12.5px; line-height:1.5; }
+.md-read em{ color:var(--ink); font-style:normal; font-weight:600; }
+
+/* ---------- Session logger ---------------------------------------- */
+.session-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 12px; }
+.session-btn{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:12px 6px; border-radius:12px; cursor:pointer;
+  background:var(--card-2); border:1px solid var(--line);
+  color:var(--ink); font:inherit; font-size:12px; font-weight:500;
+  transition:border-color .12s, transform .08s;
+}
+.session-btn span{ font-size:20px; line-height:1; }
+.session-btn:hover{ border-color:var(--accent); }
+.session-btn:active{ transform:scale(.96); }
+.mini-x{
+  background:none; border:0; color:var(--muted); cursor:pointer;
+  font-size:12px; padding:0 0 0 8px;
+}
+.mini-x:hover{ color:var(--neg); }
