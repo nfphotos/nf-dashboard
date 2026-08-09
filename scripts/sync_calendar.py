@@ -25,20 +25,60 @@ Local test:
   export GOOGLE_SERVICE_ACCOUNT_JSON="$(cat key.json)"
   python scripts/sync_calendar.py
 """
-import os, json, sys, datetime, pathlib
+import os, json, re, sys, datetime, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 
-# Green colour IDs that mean "I'm shooting this": 10 = Basil, 2 = Sage.
-MATCH_COLOR_IDS = {"10", "2"}
 DEFAULT_CALENDARS = ["falzonnicholas01@gmail.com"]
 LOOKAHEAD_DAYS = 150
 
-# Keep the feed to real fixtures/one-offs. Recurring green events (e.g. the
-# weekly Imperial Band Practice) and obvious practice/rehearsal titles are skipped.
+# --- How a fixture is identified -------------------------------------
+#
+# NOT by colour. The original design filtered on green colorIds (10 Basil,
+# 2 Sage), but the API only returns colorId for events explicitly recoloured
+# AWAY from their calendar's default. Every one of Nick's events inherits the
+# calendar default, so all 69 upcoming events came back with no colorId and the
+# green filter matched nothing. Verified against the live calendar 2026-08-09.
+#
+# Colour is still honoured when present — if he does recolour something green
+# it counts — but the primary signal is the title, which is reliable:
+# "Birkirkara vs Gzira", "Malta vs Andorra [UEFA Nations League]".
+MATCH_COLOR_IDS = {"10", "2"}
+
+# "Team vs Team" / "Team v Team". Whitespace-anchored so it can't fire on a
+# word that merely contains "v" (e.g. "Ventureathlon").
+FIXTURE_PATTERN = re.compile(r"\s+v(?:s\.?)?\s+", re.I)
+
+# Tournaments and one-off shoots that carry no "X vs Y" in the title.
+FIXTURE_KEYWORDS = (
+    "super cup", "champions league", "nations league", "futsal",
+    "fiba", "eurobasket", "tournament", "cup final", "friendly",
+)
+
+# His personal life also lives on this calendar — band and scouts. These win
+# over the fixture rules above.
 SKIP_RECURRING = True
-SKIP_TITLE_KEYWORDS = ("band practice", "rehearsal")
+SKIP_TITLE_KEYWORDS = (
+    "band practice", "rehearsal", "band club", "troop", "scout",
+    "cubs", "rover", "woodbadge", "parade",
+)
+
+
+def is_fixture(event):
+    """Is this something Nick is shooting, rather than his own diary?"""
+    title = (event.get("summary") or "").lower()
+
+    if any(k in title for k in SKIP_TITLE_KEYWORDS):
+        return False
+    if SKIP_RECURRING and event.get("recurringEventId"):
+        return False  # weekly practices etc.
+
+    if event.get("colorId") in MATCH_COLOR_IDS:
+        return True
+    if FIXTURE_PATTERN.search(title):
+        return True
+    return any(k in title for k in FIXTURE_KEYWORDS)
 
 
 def fail(msg):
@@ -111,12 +151,7 @@ def main():
                 break
 
             for e in resp.get("items", []):
-                if not take_all and e.get("colorId") not in MATCH_COLOR_IDS:
-                    continue
-                if SKIP_RECURRING and e.get("recurringEventId"):
-                    continue  # drop weekly practices etc.
-                title_l = (e.get("summary") or "").lower()
-                if any(k in title_l for k in SKIP_TITLE_KEYWORDS):
+                if not take_all and not is_fixture(e):
                     continue
                 start = e.get("start", {})
                 end = e.get("end", {})
@@ -135,7 +170,7 @@ def main():
             page = resp.get("nextPageToken")
             if not page:
                 break
-        per_calendar.setdefault(cal_id, f"{found} event(s){' — all events' if take_all else ' — green only'}")
+        per_calendar.setdefault(cal_id, f"{found} event(s){' — all events' if take_all else ' — fixtures only'}")
 
     # Every calendar erroring means the sync is broken, not that Nick has an
     # empty diary. Don't overwrite good data with an empty list in that case.
