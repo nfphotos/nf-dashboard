@@ -84,19 +84,36 @@
     <!-- ===== FITNESS ===== -->
     <section id="sec-fitness" class="panel-group">
       <div class="grid">
-        <article class="card stat"><h3>Resting HR</h3><div class="big" id="f-rhr">--</div><small>bpm</small></article>
+        <article class="card stat"><h3>Resting HR</h3><div class="big" id="f-rhr">--</div><small>bpm today</small></article>
         <article class="card stat"><h3>Stress</h3><div class="big" id="f-stress">--</div><small>avg today</small></article>
-        <article class="card stat"><h3>VO₂ Max</h3><div class="big" id="f-vo2">--</div><small>ml/kg/min</small></article>
-        <article class="card stat"><h3>Training load</h3><div class="big" id="f-load">--</div><small>7-day</small></article>
       </div>
+
+      <article class="card chart-card">
+        <h3>Sleep <span class="pill" id="f-sleep-avg">—</span></h3>
+        <div class="chart" id="ch-sleep"></div>
+      </article>
+
+      <article class="card chart-card">
+        <h3>Steps <span class="pill" id="f-steps-avg">—</span></h3>
+        <div class="chart" id="ch-steps"></div>
+      </article>
+
+      <article class="card chart-card">
+        <h3>Resting heart rate <span class="pill" id="f-rhr-avg">—</span></h3>
+        <div class="chart" id="ch-rhr"></div>
+        <small class="muted">Lower is generally better. Spikes often follow a poor night or a hard day.</small>
+      </article>
+
+      <article class="card chart-card">
+        <h3>Body Battery peak <span class="pill" id="f-bb-avg">—</span></h3>
+        <div class="chart" id="ch-bb"></div>
+        <small class="muted">How charged you actually got each day.</small>
+      </article>
+
       <article class="card">
         <h3>Today's garage-gym session <span class="pill" id="f-session-pill">auto</span></h3>
         <div id="f-workout" class="workout">—</div>
         <button class="action-btn" id="f-done-btn">Mark session done 💪</button>
-      </article>
-      <article class="card">
-        <h3>Recent activities</h3>
-        <ul class="list" id="f-activities"><li class="muted">No activity data yet.</li></ul>
       </article>
     </section>
 

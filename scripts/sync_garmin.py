@@ -159,6 +159,58 @@ def build_daily(api, today):
     }
 
 
+HISTORY_DAYS = 30
+
+
+def build_history(api, today):
+    """Daily series for the Fitness tab.
+
+    Nick doesn't record activities on the watch (confirmed 2026-08-09: zero in
+    180 days), so VO2max/training status/activities are permanently empty for
+    him. What the watch DOES record every day is steps, resting HR and sleep —
+    so the trends are built from those.
+    """
+    end = datetime.date.fromisoformat(today)
+    start = end - datetime.timedelta(days=HISTORY_DAYS - 1)
+    s, e = start.isoformat(), end.isoformat()
+
+    days = {}
+
+    def slot(date):
+        return days.setdefault(date, {"date": date})
+
+    for row in safe(api.get_daily_steps, s, e, default=[]) or []:
+        d = row.get("calendarDate")
+        if d:
+            slot(d)["steps"] = row.get("totalSteps")
+            slot(d)["stepGoal"] = row.get("stepGoal")
+
+    for row in safe(api.get_rhr_daily, s, e, default=[]) or []:
+        d = row.get("calendarDate")
+        if d and row.get("value") is not None:
+            slot(d)["restingHR"] = round(row["value"])
+
+    for row in safe(api.get_sleep_daily, s, e, default=[]) or []:
+        d = row.get("calendarDate")
+        vals = row.get("values") or {}
+        secs = vals.get("totalSleepTimeInSeconds")
+        if d and secs:
+            slot(d)["sleepHours"] = round(secs / 3600, 1)
+
+    # Daily Body Battery peak — "how charged did I actually get today".
+    # The intraday array is only ~6 points a day for this watch, far too coarse
+    # to draw as a curve, but its daily maximum is a genuine 30-point trend.
+    for row in safe(api.get_body_battery, s, e, default=[]) or []:
+        d = row.get("date")
+        vals = [v[1] for v in (row.get("bodyBatteryValuesArray") or []) if v and v[1] is not None]
+        if d and vals:
+            slot(d)["bodyBatteryPeak"] = max(vals)
+
+    return [days[k] for k in sorted(days)]
+
+
+
+
 def build_activities(api):
     out = []
     for a in (safe(api.get_activities, 0, 6, default=[]) or []):
@@ -204,7 +256,11 @@ def main():
     if not metrics:
         fail("Authenticated, but Garmin returned no metrics at all for today.")
 
-    payload = {"daily": daily, "activities": build_activities(api)}
+    payload = {
+        "daily": daily,
+        "activities": build_activities(api),
+        "history": build_history(api, today),
+    }
     (DATA / "garmin.json").write_text(json.dumps(payload, indent=2) + "\n")
 
     meta = {}

@@ -59,8 +59,8 @@ function renderGarmin(g) {
 
   set("f-rhr", d.restingHR);
   set("f-stress", d.stress);
-  set("f-vo2", d.vo2max);
-  set("f-load", d.trainingLoad);
+
+  renderTrends(g.history);
 
   // Readiness ring + advice.
   // Stale data is worse than no data: an old number silently reads as today's.
@@ -95,12 +95,154 @@ function renderGarmin(g) {
     $("#rb-source").textContent = "";
   }
 
-  // Activities
-  if (g.activities?.length) {
-    $("#f-activities").innerHTML = g.activities.map(a => `
-      <li><span class="lead">${a.name}</span>
-      <span class="right">${a.distance ? a.distance + " · " : ""}${a.duration || ""}</span></li>`).join("");
-  }
+}
+
+/* ---------- 30-day trends -------------------------------------------
+   One series per chart, so no legend — the card heading names it.
+   Goal lines are neutral, not a second data colour, so the only hue on
+   the plot is the series itself.
+   Charts are drawn as inline SVG in a fixed viewBox and scaled by CSS;
+   strokes use vector-effect so they stay 2px at any width.
+--------------------------------------------------------------------- */
+const CHART = { w: 320, h: 88, padT: 10, padB: 14 };
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function shortDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+/** Shared scaffolding: scales, neutral goal line, hover targets, tooltip. */
+function chartFrame(rows, { value, goal, fmtValue, label }) {
+  const { w, h, padT, padB } = CHART;
+  const plotH = h - padT - padB;
+  const vals = rows.map(value).filter(v => v != null);
+  if (!vals.length) return null;
+
+  // Include the goal so the line is never off-canvas.
+  let lo = Math.min(...vals, goal ?? Infinity);
+  let hi = Math.max(...vals, goal ?? -Infinity);
+  if (hi === lo) { hi += 1; lo -= 1; }
+  const pad = (hi - lo) * 0.12;
+  lo -= pad; hi += pad;
+
+  const x = i => (i + 0.5) * (w / rows.length);
+  const y = v => padT + plotH - ((v - lo) / (hi - lo)) * plotH;
+
+  const hover = rows.map((r, i) => {
+    const v = value(r);
+    if (v == null) return "";
+    return `<rect class="ch-hit" x="${i * (w / rows.length)}" y="0" width="${w / rows.length}" height="${h}"
+      data-label="${esc(shortDate(r.date))}" data-value="${esc(fmtValue(v))}"></rect>`;
+  }).join("");
+
+  // Put the goal label on whichever end has the shorter marks, so it can't
+  // land on top of the data. (It collided with the tall bars when pinned right.)
+  const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
+  const head = mean(rows.slice(0, 6).map(value).filter(v => v != null));
+  const tail = mean(rows.slice(-6).map(value).filter(v => v != null));
+  const labelLeft = head <= tail;
+
+  const goalLine = goal == null ? "" :
+    `<line class="ch-goal" x1="0" x2="${w}" y1="${y(goal)}" y2="${y(goal)}"></line>
+     <text class="ch-goal-label" x="${labelLeft ? 2 : w - 2}" y="${y(goal) - 4}"
+       text-anchor="${labelLeft ? "start" : "end"}">${esc(label)}</text>`;
+
+  return { w, h, x, y, hover, goalLine, vals };
+}
+
+function barChart(el, rows, opts) {
+  const f = chartFrame(rows, opts);
+  if (!f) { el.innerHTML = '<p class="muted">No data yet.</p>'; return; }
+  const bw = (f.w / rows.length) - 2;               // 2px surface gap between bars
+  const base = CHART.h - CHART.padB;
+
+  const bars = rows.map((r, i) => {
+    const v = opts.value(r);
+    if (v == null) return "";
+    const yy = f.y(v);
+    // Below-goal days are dimmed — same hue, lower emphasis, not a new colour.
+    const dim = opts.goal != null && v < opts.goal ? ' ch-bar--under' : "";
+    return `<rect class="ch-bar${dim}" x="${i * (f.w / rows.length) + 1}" y="${yy}"
+      width="${bw}" height="${Math.max(1, base - yy)}" rx="2"></rect>`;
+  }).join("");
+
+  el.innerHTML = svgWrap(f, bars + f.goalLine + f.hover);
+  attachTooltip(el);
+}
+
+function lineChart(el, rows, opts) {
+  const f = chartFrame(rows, opts);
+  if (!f) { el.innerHTML = '<p class="muted">No data yet.</p>'; return; }
+
+  const pts = rows.map((r, i) => [i, opts.value(r)]).filter(p => p[1] != null);
+  const d = pts.map(([i, v], n) => `${n ? "L" : "M"}${f.x(i).toFixed(1)},${f.y(v).toFixed(1)}`).join("");
+  const area = `${d}L${f.x(pts[pts.length - 1][0]).toFixed(1)},${CHART.h - CHART.padB}L${f.x(pts[0][0]).toFixed(1)},${CHART.h - CHART.padB}Z`;
+
+  // Direct-label the latest point only — never a number on every point.
+  const [li, lv] = pts[pts.length - 1];
+  const marker = `<circle class="ch-dot" cx="${f.x(li)}" cy="${f.y(lv)}" r="3"></circle>
+    <text class="ch-last" x="${f.x(li) - 6}" y="${f.y(lv) - 6}" text-anchor="end">${esc(opts.fmtValue(lv))}</text>`;
+
+  el.innerHTML = svgWrap(f, `<path class="ch-area" d="${area}"></path><path class="ch-line" d="${d}"></path>` + f.goalLine + marker + f.hover);
+  attachTooltip(el);
+}
+
+function svgWrap(f, inner) {
+  return `<svg viewBox="0 0 ${f.w} ${f.h}" preserveAspectRatio="none" role="img">${inner}</svg>
+    <div class="ch-tip" hidden></div>`;
+}
+
+function attachTooltip(el) {
+  const tip = el.querySelector(".ch-tip");
+  el.querySelectorAll(".ch-hit").forEach(hit => {
+    const show = e => {
+      tip.textContent = `${hit.dataset.label} · ${hit.dataset.value}`;
+      tip.hidden = false;
+      const box = el.getBoundingClientRect();
+      const p = e.touches ? e.touches[0] : e;
+      tip.style.left = Math.min(Math.max(p.clientX - box.left, 40), box.width - 40) + "px";
+    };
+    hit.addEventListener("mouseenter", show);
+    hit.addEventListener("mousemove", show);
+    hit.addEventListener("touchstart", show, { passive: true });
+    hit.addEventListener("mouseleave", () => { tip.hidden = true; });
+  });
+}
+
+function renderTrends(history) {
+  if (!Array.isArray(history) || !history.length) return;
+
+  const avg = key => {
+    const v = history.map(h => h[key]).filter(x => x != null);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
+  const pill = (id, text) => { const el = $("#" + id); if (el && text) el.textContent = text; };
+
+  const sleepGoal = CONFIG.goals?.sleepHours ?? null;
+  const stepGoal = history.find(h => h.stepGoal)?.stepGoal ?? CONFIG.goals?.dailySteps ?? null;
+
+  const aSleep = avg("sleepHours"), aSteps = avg("steps"), aRhr = avg("restingHR"), aBb = avg("bodyBatteryPeak");
+  pill("f-sleep-avg", aSleep && `${aSleep.toFixed(1)}h avg · 30d`);
+  pill("f-steps-avg", aSteps && `${fmt.format(Math.round(aSteps))} avg · 30d`);
+  pill("f-rhr-avg", aRhr && `${Math.round(aRhr)} bpm avg · 30d`);
+  pill("f-bb-avg", aBb && `${Math.round(aBb)} avg · 30d`);
+
+  barChart($("#ch-sleep"), history, {
+    value: h => h.sleepHours, goal: sleepGoal,
+    fmtValue: v => `${v}h`, label: sleepGoal ? `${sleepGoal}h target` : "",
+  });
+  barChart($("#ch-steps"), history, {
+    value: h => h.steps, goal: stepGoal,
+    fmtValue: v => fmt.format(v), label: stepGoal ? `${fmt.format(stepGoal)} goal` : "",
+  });
+  lineChart($("#ch-rhr"), history, {
+    value: h => h.restingHR, fmtValue: v => `${v} bpm`,
+  });
+  lineChart($("#ch-bb"), history, {
+    value: h => h.bodyBatteryPeak, fmtValue: v => `${v}`,
+  });
 }
 
 function renderWorkout(type) {
