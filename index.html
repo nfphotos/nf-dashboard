@@ -126,6 +126,20 @@
         <small class="muted">How charged you actually got each day.</small>
       </article>
 
+      <article class="card chart-card" id="stress-card" hidden>
+        <h3>Stress &amp; recovery <span class="pill" id="st-today">—</span></h3>
+        <div class="st-bands" id="st-bands"></div>
+        <small class="muted st-cap">Today — how the day split across Garmin's stress bands</small>
+
+        <div class="st-sub">Hours genuinely at rest</div>
+        <div class="chart" id="ch-rest"></div>
+
+        <div class="st-sub">Average stress</div>
+        <div class="chart" id="ch-stress"></div>
+
+        <p class="md-read" id="st-read"></p>
+      </article>
+
       <article class="card chart-card" id="weekday-card" hidden>
         <h3>Sleep by weekday <span class="pill" id="wd-spread">—</span></h3>
         <div class="chart" id="ch-weekday"></div>

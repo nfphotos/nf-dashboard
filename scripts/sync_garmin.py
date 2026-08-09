@@ -230,9 +230,66 @@ def build_history(api, today):
                 slot(d)["bodyBatteryPeak"] = max(vals)
         chunk_start = chunk_end + datetime.timedelta(days=1)
 
+    # Stress rides on a per-day endpoint, so it's merged + backfilled here
+    # rather than fetched wholesale.
+    filled = add_stress(api, days, load_existing_history())
+    if filled:
+        print(f"stress: topped up {filled} day(s)")
+
     return [days[k] for k in sorted(days)]
 
 
+
+
+# Stress has no range endpoint — get_stats is one call per day. Backfilling 90
+# days every run would be 90 calls against an API that locks accounts for
+# 48-72h when it decides you're hammering it. So keep whatever we already
+# fetched and top up a few days per run; the history fills in within a week.
+MAX_STRESS_BACKFILL = 12
+
+
+def load_existing_history():
+    """Previously fetched days, so per-day metrics survive between runs."""
+    try:
+        prior = json.loads((DATA / "garmin.json").read_text()).get("history", [])
+        return {h["date"]: h for h in prior if h.get("date")}
+    except Exception:
+        return {}
+
+
+def add_stress(api, days, existing):
+    """Merge stress + intensity minutes into the day map, oldest gaps last.
+
+    Intensity minutes ride along free in the same response — storing them now
+    avoids a second backfill when they're wanted.
+    """
+    for date, prior in existing.items():
+        if date in days:
+            for k, v in prior.items():
+                days[date].setdefault(k, v)
+
+    missing = sorted((d for d in days if days[d].get("stressAvg") is None), reverse=True)
+    if not missing:
+        return 0
+
+    for date in missing[:MAX_STRESS_BACKFILL]:
+        s = safe(api.get_stats, date, default={}) or {}
+        if s.get("averageStressLevel") is None:
+            continue
+        secs = lambda k: round((s.get(k) or 0) / 60)
+        days[date].update({
+            "stressAvg": s.get("averageStressLevel"),
+            "stressMax": s.get("maxStressLevel"),
+            "restMin": secs("restStressDuration"),
+            "lowMin": secs("lowStressDuration"),
+            "medMin": secs("mediumStressDuration"),
+            "highMin": secs("highStressDuration"),
+            "stressQualifier": s.get("stressQualifier"),
+            "intensityModerate": s.get("moderateIntensityMinutes"),
+            "intensityVigorous": s.get("vigorousIntensityMinutes"),
+            "intensityGoal": s.get("intensityMinutesGoal"),
+        })
+    return min(len(missing), MAX_STRESS_BACKFILL)
 
 
 def build_activities(api):

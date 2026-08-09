@@ -348,3 +348,19 @@ table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
   font:inherit; font-size:17px; font-variant-numeric:tabular-nums;
 }
 .gym-fields input:focus{ outline:none; border-color:var(--accent); }
+
+/* ---------- Stress & recovery ------------------------------------- */
+.st-bands{ display:flex; height:38px; border-radius:9px; overflow:hidden; margin:6px 0 4px; gap:2px; }
+.st-seg{ display:flex; align-items:center; justify-content:center; min-width:2px; overflow:hidden; }
+.st-seg span{ font-size:10px; line-height:1.1; text-align:center; color:var(--foundation-black); font-weight:600; }
+.st-seg small{ display:block; font-weight:600; opacity:.9; font-size:9px; }
+/* Sequential ramp of one hue: calm -> loaded. An intensity scale, not
+   four independent categories, so it must not be four different colours. */
+.st-seg.b1{ background:#5EEAD4; }   /* teal-300 */
+.st-seg.b2{ background:#2DD4BF; }   /* teal-400 */
+.st-seg.b3{ background:#14B8A6; }   /* teal-500 */
+.st-seg.b4{ background:#0F766E; }   /* teal-700 */
+.st-seg.b4 span{ color:var(--ink); }
+.st-cap{ display:block; margin-bottom:12px; }
+.st-sub{ color:var(--ink-dim); font-size:11px; text-transform:uppercase;
+  letter-spacing:.05em; margin:12px 0 2px; }

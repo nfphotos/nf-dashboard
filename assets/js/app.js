@@ -214,6 +214,69 @@ function attachTooltip(el) {
   });
 }
 
+/* ---------- Stress & recovery ----------------------------------------
+   The one stream that speaks to mental load rather than movement, and it
+   was going unused. Garmin's bands are 0-25 rest, 26-50 low, 51-75
+   medium, 76-100 high; the day-composition bar uses a sequential ramp of
+   ONE hue so it reads as an intensity scale, not four categories.
+   Deliberately no interpretation of what the numbers mean about his life
+   — a wrist sensor is not a diagnosis.
+--------------------------------------------------------------------- */
+const STRESS_BANDS = [
+  { key: "restMin", label: "Rest",   cls: "b1" },
+  { key: "lowMin",  label: "Low",    cls: "b2" },
+  { key: "medMin",  label: "Medium", cls: "b3" },
+  { key: "highMin", label: "High",   cls: "b4" },
+];
+
+function renderStress(history) {
+  const card = $("#stress-card");
+  if (!card || !Array.isArray(history)) return;
+
+  // Same window as the other trend charts — the backfill will pass 30 days.
+  const rows = history.filter(h => h.stressAvg != null).slice(-TREND_DAYS);
+  if (rows.length < 3) return;                 // backfill still running
+
+  const latest = rows[rows.length - 1];
+  $("#st-today").textContent =
+    `avg ${latest.stressAvg}${latest.stressQualifier && latest.stressQualifier !== "UNKNOWN"
+      ? ` · ${latest.stressQualifier.toLowerCase()}` : ""}`;
+
+  // Day composition — proportional, labelled, never colour-alone.
+  const total = STRESS_BANDS.reduce((s, b) => s + (latest[b.key] || 0), 0);
+  $("#st-bands").innerHTML = total
+    ? STRESS_BANDS.map(b => {
+        const m = latest[b.key] || 0;
+        if (!m) return "";
+        const pct = (m / total) * 100;
+        return `<div class="st-seg ${b.cls}" style="width:${pct}%" title="${b.label}: ${Math.round(m / 60 * 10) / 10}h">
+          ${pct > 12 ? `<span>${b.label}<small>${(m / 60).toFixed(1)}h</small></span>` : ""}
+        </div>`;
+      }).join("")
+    : "";
+
+  barChart($("#ch-rest"), rows, {
+    value: h => h.restMin != null ? h.restMin / 60 : null,
+    fmtValue: v => `${v.toFixed(1)}h`,
+  });
+  lineChart($("#ch-stress"), rows, {
+    value: h => h.stressAvg,
+    fmtValue: v => `${Math.round(v)}`,
+  });
+
+  const stressful = rows.filter(h => h.stressQualifier === "STRESSFUL").length;
+  const rated = rows.filter(h => h.stressQualifier && h.stressQualifier !== "UNKNOWN").length;
+  const avgRest = rows.reduce((s, h) => s + (h.restMin || 0), 0) / rows.length / 60;
+  const avgHigh = rows.reduce((s, h) => s + (h.highMin || 0), 0) / rows.length / 60;
+
+  const bits = [`Averaging ${avgRest.toFixed(1)}h at rest and ${avgHigh.toFixed(1)}h in the high band per day.`];
+  if (rated >= 3) bits.push(`Garmin rated <em>${stressful} of ${rated}</em> days "stressful".`);
+  if (rows.length < 25) bits.push(`Building history — ${rows.length} days so far, backfilling a few each sync.`);
+  $("#st-read").innerHTML = bits.join(" ");
+
+  card.hidden = false;
+}
+
 /* ---------- Tonight: when to be asleep -------------------------------
    Deliberately NOT a prediction of how fresh he'll feel. Checked against
    88 night->morning pairs: correlation between sleep duration and the
@@ -641,8 +704,15 @@ function renderSessions() {
   $("#gym-save").onclick = saveEntry;
 }
 
-function renderTrends(history) {
-  if (!Array.isArray(history) || !history.length) return;
+const TREND_DAYS = 30;
+
+function renderTrends(fullHistory) {
+  if (!Array.isArray(fullHistory) || !fullHistory.length) return;
+
+  // History is 90 days (the matchday comparison needs the depth), but these
+  // charts are labelled "30d" and 90 bars in a 320-unit viewBox is a smear.
+  // Slice here rather than shortening the underlying data.
+  const history = fullHistory.slice(-TREND_DAYS);
 
   const avg = key => {
     const v = history.map(h => h[key]).filter(x => x != null);
@@ -972,6 +1042,7 @@ async function boot() {
   renderGarmin(g); renderPhoto(p); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
   renderSessions();
+  renderStress(g?.history);
   renderTonight(g?.history, cal);
   renderWeekday(g?.history);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data
