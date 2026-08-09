@@ -297,3 +297,14 @@ table.md.wd{ margin-top:10px; font-size:12px; }
 table.md.wd th, table.md.wd td{ padding:5px 2px; text-align:center; }
 table.md.wd tr th:first-child{ text-align:left; white-space:nowrap; }
 table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
+
+/* ---------- Tonight card ------------------------------------------ */
+.tonight{ border-color:var(--accent-soft); }
+.tn-row{ display:flex; align-items:center; gap:14px; margin:6px 0 2px; }
+.tn-block{ flex:1; }
+.tn-block small{ display:block; color:var(--ink-dim); font-size:11px;
+  text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; }
+.tn-block .big{ font-family:"Space Grotesk",Inter,sans-serif; font-size:30px;
+  font-weight:700; color:var(--accent); line-height:1.1; font-variant-numeric:tabular-nums; }
+.tn-arrow{ color:var(--muted); font-size:18px; }
+.tn-why{ margin:8px 0 0; color:var(--ink-dim); font-size:12.5px; line-height:1.5; }

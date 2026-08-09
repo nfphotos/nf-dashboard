@@ -2,7 +2,9 @@ name: Sync Garmin
 
 on:
   schedule:
-    - cron: "30 5 * * *"   # 05:30 UTC daily (~07:30 Malta summer)
+    - cron: "30 5 * * *"    # 05:30 UTC (~07:30 Malta) — overnight sleep is in
+    - cron: "0 17 * * *"    # 17:00 UTC (~19:00 Malta) — so the Tonight card and
+                            # today's Body Battery reflect the day, not the dawn
   workflow_dispatch: {}      # lets you run it manually from the Actions tab
 
 permissions:

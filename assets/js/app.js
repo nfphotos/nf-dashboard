@@ -214,6 +214,71 @@ function attachTooltip(el) {
   });
 }
 
+/* ---------- Tonight: when to be asleep -------------------------------
+   Deliberately NOT a prediction of how fresh he'll feel. Checked against
+   88 night->morning pairs: correlation between sleep duration and the
+   next day's Body Battery is +0.01, and with resting HR +0.04. There is
+   no signal in his data to predict from, so this card does arithmetic
+   and says so — target duration, counted back from when he actually has
+   to be up. Recomputed on every load, so it is current whenever opened.
+--------------------------------------------------------------------- */
+function medianWake(history, weekdayIdx, limit = 8) {
+  const vals = history
+    .filter(h => h.wakeMin != null &&
+      (new Date(h.date + "T00:00:00Z").getUTCDay() + 6) % 7 === weekdayIdx)
+    .slice(-limit)
+    .map(h => h.wakeMin)
+    .sort((a, b) => a - b);
+  if (!vals.length) return null;
+  const m = Math.floor(vals.length / 2);
+  return vals.length % 2 ? vals[m] : (vals[m - 1] + vals[m]) / 2;
+}
+
+function renderTonight(history, calendar) {
+  const card = $("#tonight-card");
+  if (!card || !Array.isArray(history) || history.length < 14) return;
+
+  const target = CONFIG.goals?.sleepHours ?? 7.5;
+  const ONSET = 15;                       // minutes to actually fall asleep
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tmwIdx = (tomorrow.getDay() + 6) % 7;
+  const tmwISO = tomorrow.toISOString().slice(0, 10);
+
+  const wake = medianWake(history, tmwIdx);
+  if (wake == null) return;
+
+  const round5 = m => Math.round(m / 5) * 5;
+  const asleepBy = ((wake - target * 60) + 1440) % 1440;
+  const lightsOut = (asleepBy - ONSET + 1440) % 1440;
+
+  $("#tn-lights").textContent = clock(round5(lightsOut));
+  $("#tn-wake").textContent = clock(round5(wake));
+
+  // Sleep debt against his own target, last 7 nights.
+  const last7 = history.slice(-7).filter(h => h.sleepHours != null);
+  const debt = last7.reduce((s, h) => s + (target - h.sleepHours), 0);
+  $("#tn-debt").textContent = last7.length < 7 ? "—"
+    : debt > 0.5 ? `${debt.toFixed(1)}h behind this week`
+    : debt < -0.5 ? `${Math.abs(debt).toFixed(1)}h ahead this week`
+    : "on target this week";
+
+  const dayName = DAY_NAMES[tmwIdx];
+  const why = [`${dayName} you're typically up at ${clock(round5(wake))}. ` +
+    `That's ${target}h asleep from ${clock(round5(asleepBy))}, so lights out ${clock(round5(lightsOut))}.`];
+
+  // A fixture tomorrow changes the evening, not the morning — worth saying.
+  const fixture = ((calendar && calendar.matches) || [])
+    .find(m => (m.start || "").slice(0, 10) === tmwISO);
+  if (fixture) why.push(`You're shooting ${fixture.title.trim()} tomorrow.`);
+
+  if (debt > 1.5) why.push(`You're carrying ${debt.toFixed(1)}h of deficit against your own ${target}h target.`);
+
+  $("#tn-why").textContent = why.join(" ");
+  card.hidden = false;
+}
+
 /* ---------- Sleep by weekday -----------------------------------------
    Clock times need circular means: the average of 23:50 and 00:10 is
    00:00, not 12:00. A plain arithmetic mean put "bedtime" at 16:00 and
@@ -765,6 +830,7 @@ async function boot() {
   renderGarmin(g); renderPhoto(p); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
   renderSessions();
+  renderTonight(g?.history, cal);
   renderWeekday(g?.history);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data
   renderBriefing();   // after readiness + fixture are populated
