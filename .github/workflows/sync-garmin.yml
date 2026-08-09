@@ -39,10 +39,22 @@ jobs:
           GH_TOKEN: ${{ secrets.TOKEN_ROTATION_PAT }}
         run: gh secret set GARMINTOKENS_BASE64 --repo ${{ github.repository }} < /tmp/garmin_tokens.b64
 
+      # Rebase-and-retry: the Garmin and Calendar syncs both commit to main and
+      # will collide if they ever overlap (a plain `git push` loses the race and
+      # fails the run even though the data was fetched fine).
       - name: Commit if changed
         run: |
           git config user.name "garmin-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/garmin.json data/meta.json
-          git diff --cached --quiet || git commit -m "chore: garmin sync $(date -u +%FT%TZ)"
-          git push
+          git diff --cached --quiet && { echo "no change"; exit 0; }
+          git commit -m "chore: garmin sync $(date -u +%FT%TZ)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push; then
+              exit 0
+            fi
+            echo "push attempt $attempt lost the race; retrying"
+            sleep $((attempt * 5))
+          done
+          echo "::error::could not push after 3 attempts"
+          exit 1

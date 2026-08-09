@@ -18,15 +18,28 @@ jobs:
           python-version: "3.12"
       - name: Install deps
         run: pip install -r scripts/requirements.txt
-      - name: Pull green calendar events
+      - name: Pull fixtures from Google Calendar
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           CALENDAR_IDS: ${{ vars.CALENDAR_IDS }}   # optional repo variable; falls back to primary
         run: python scripts/sync_calendar.py
+
+      # Rebase-and-retry: the Calendar and Garmin syncs both commit to main and
+      # will collide if they ever overlap (a plain `git push` loses the race and
+      # fails the run even though the data was fetched fine).
       - name: Commit if changed
         run: |
           git config user.name "calendar-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/calendar.json
-          git diff --cached --quiet || git commit -m "chore: calendar sync $(date -u +%FT%TZ)"
-          git push
+          git diff --cached --quiet && { echo "no change"; exit 0; }
+          git commit -m "chore: calendar sync $(date -u +%FT%TZ)"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push; then
+              exit 0
+            fi
+            echo "push attempt $attempt lost the race; retrying"
+            sleep $((attempt * 5))
+          done
+          echo "::error::could not push after 3 attempts"
+          exit 1
