@@ -565,15 +565,77 @@ function renderTonight(history, calendar) {
   const fixed = (CONFIG.wakeTimes || {})[dayKey];
   const fixedMin = fixed ? Number(fixed.slice(0, 2)) * 60 + Number(fixed.slice(3, 5)) : null;
 
-  const wake = fixedMin ?? medianWake(history, tmwIdx);
-  if (wake == null) return;
+  const defaultWake = fixedMin ?? medianWake(history, tmwIdx);
+  if (defaultWake == null) return;
 
-  const round5 = m => Math.round(m / 5) * 5;
-  const asleepBy = ((wake - target * 60) + 1440) % 1440;
-  const lightsOut = (asleepBy - ONSET + 1440) % 1440;
+  const round15 = m => (Math.round(m / 15) * 15) % 1440;
+  const SLEEP_MIN = target * 60;
 
-  $("#tn-lights").textContent = clock(round5(lightsOut));
-  $("#tn-wake").textContent = clock(round5(wake));
+  // Either end can be the one he sets, and the other follows. Overrides are
+  // keyed to tomorrow's date so they expire on their own — a late night on
+  // Saturday shouldn't quietly become the new Monday plan.
+  const OVERRIDE_KEY = "nf.tonight";
+  const readOverride = () => {
+    try {
+      const o = JSON.parse(localStorage.getItem(OVERRIDE_KEY));
+      return o && o.for === tmwISO ? o : null;
+    } catch { return null; }
+  };
+
+  const fill = (sel, selected) => {
+    sel.innerHTML = "";
+    for (let m = 0; m < 1440; m += 15) {
+      const o = document.createElement("option");
+      o.value = m;
+      o.textContent = clock(m);
+      if (m === selected) o.selected = true;
+      sel.appendChild(o);
+    }
+  };
+
+  const lightsSel = $("#tn-lights"), wakeSel = $("#tn-wake");
+
+  function paint(wake, lightsOut, source) {
+    fill(wakeSel, round15(wake));
+    fill(lightsSel, round15(lightsOut));
+
+    const asleepBy = (lightsOut + ONSET) % 1440;
+    const actual = ((wake - asleepBy) + 1440) % 1440;
+    const h = Math.floor(actual / 60), mm = actual % 60;
+    $("#tn-duration").textContent =
+      `${h}h${mm ? ` ${mm}m` : ""} asleep · allowing ${ONSET} min to drop off`;
+
+    $("#tn-reset").hidden = source === "default";
+
+    const dayName = DAY_NAMES[tmwIdx];
+    const why = [];
+    if (source === "default") {
+      why.push(fixedMin != null
+        ? `${dayName} you're up at ${clock(defaultWake)} for work.`
+        : `${dayName} you're typically up at ${clock(round15(defaultWake))}.`);
+    } else {
+      why.push(`Set by hand for tomorrow${source === "lights" ? " from bedtime" : ""}.`);
+    }
+    why.push(`Asleep by ${clock(round15(asleepBy))} gives you ${h}h${mm ? ` ${mm}m` : ""}.`);
+
+    // Honest about the size of the ask rather than printing a time as if easy.
+    const recent = history.filter(x => x.bedMin != null &&
+      (new Date(x.date + "T00:00:00Z").getUTCDay() + 6) % 7 === tmwIdx).slice(-8);
+    if (recent.length >= 3) {
+      const usual = circMean(recent.map(x => x.bedMin));
+      const shift = ((usual - asleepBy) + 1440) % 1440;
+      if (shift > 20 && shift < 300) {
+        why.push(`You normally fall asleep around ${clock(round15(usual))} on a ${dayName}, so that's ${Math.round(shift)} min earlier — worth moving in 20-min steps rather than all at once.`);
+      }
+    }
+
+    const fixture = ((calendar && calendar.matches) || [])
+      .find(m => (m.start || "").slice(0, 10) === tmwISO);
+    if (fixture) why.push(`You're shooting ${fixture.title.trim()} tomorrow.`);
+    if (debt > 1.5) why.push(`You're carrying ${debt.toFixed(1)}h of deficit against your own ${target}h target.`);
+
+    $("#tn-why").textContent = why.join(" ");
+  }
 
   // Sleep debt against his own target, last 7 nights.
   const last7 = history.slice(-7).filter(h => h.sleepHours != null);
@@ -583,33 +645,30 @@ function renderTonight(history, calendar) {
     : debt < -0.5 ? `${Math.abs(debt).toFixed(1)}h ahead this week`
     : "on target this week";
 
-  const dayName = DAY_NAMES[tmwIdx];
-  const why = [
-    fixedMin != null
-      ? `${dayName} you're up at ${clock(wake)} for work. `
-      : `${dayName} you're typically up at ${clock(round5(wake))}. `,
-    `That's ${target}h asleep from ${clock(round5(asleepBy))}, so lights out ${clock(round5(lightsOut))}.`,
-  ];
+  const defaultLights = ((defaultWake - SLEEP_MIN - ONSET) + 2880) % 1440;
+  const saved = readOverride();
+  paint(saved ? saved.wake : defaultWake,
+        saved ? saved.lights : defaultLights,
+        saved ? saved.source : "default");
 
-  // Being honest about the size of the ask beats pretending it's easy.
-  const recent = history.filter(h => h.bedMin != null &&
-    (new Date(h.date + "T00:00:00Z").getUTCDay() + 6) % 7 === tmwIdx).slice(-8);
-  if (recent.length >= 3) {
-    const usual = circMean(recent.map(h => h.bedMin));
-    const shift = ((usual - asleepBy) + 1440) % 1440;
-    if (shift > 20 && shift < 300) {
-      why.push(`You normally fall asleep around ${clock(round5(usual))} on a ${dayName}, so that's ${Math.round(shift)} min earlier — worth moving in 20-min steps rather than all at once.`);
-    }
-  }
+  // Move the wake time -> bedtime follows. Move the bedtime -> wake follows.
+  wakeSel.onchange = () => {
+    const wake = Number(wakeSel.value);
+    const lights = ((wake - SLEEP_MIN - ONSET) + 2880) % 1440;
+    localStorage.setItem(OVERRIDE_KEY, JSON.stringify({ for: tmwISO, wake, lights, source: "wake" }));
+    paint(wake, lights, "wake");
+  };
+  lightsSel.onchange = () => {
+    const lights = Number(lightsSel.value);
+    const wake = (lights + ONSET + SLEEP_MIN) % 1440;
+    localStorage.setItem(OVERRIDE_KEY, JSON.stringify({ for: tmwISO, wake, lights, source: "lights" }));
+    paint(wake, lights, "lights");
+  };
+  $("#tn-reset").onclick = () => {
+    localStorage.removeItem(OVERRIDE_KEY);
+    paint(defaultWake, defaultLights, "default");
+  };
 
-  // A fixture tomorrow changes the evening, not the morning — worth saying.
-  const fixture = ((calendar && calendar.matches) || [])
-    .find(m => (m.start || "").slice(0, 10) === tmwISO);
-  if (fixture) why.push(`You're shooting ${fixture.title.trim()} tomorrow.`);
-
-  if (debt > 1.5) why.push(`You're carrying ${debt.toFixed(1)}h of deficit against your own ${target}h target.`);
-
-  $("#tn-why").textContent = why.join(" ");
   card.hidden = false;
 }
 

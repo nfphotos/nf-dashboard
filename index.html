@@ -89,13 +89,17 @@
         <div class="tn-row">
           <div class="tn-block">
             <small>Lights out</small>
-            <div class="big" id="tn-lights">—</div>
+            <select class="tn-select" id="tn-lights" aria-label="Lights out time"></select>
           </div>
           <div class="tn-arrow">→</div>
           <div class="tn-block">
             <small>Up at</small>
-            <div class="big" id="tn-wake">—</div>
+            <select class="tn-select" id="tn-wake" aria-label="Wake time"></select>
           </div>
+        </div>
+        <div class="tn-meta">
+          <span id="tn-duration">—</span>
+          <button class="mini-btn" id="tn-reset" hidden>reset</button>
         </div>
         <p class="tn-why" id="tn-why"></p>
       </article>

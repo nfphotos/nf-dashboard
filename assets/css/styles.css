@@ -395,3 +395,16 @@ table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
 .ci-note:focus{ outline:none; border-color:var(--accent); }
 .ci-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
 .s-count small{ font-size:.6em; font-weight:400; color:var(--muted); }
+
+/* Tonight — both ends editable, either drives the other */
+.tn-select{
+  appearance:none; -webkit-appearance:none;
+  background:transparent; border:0; border-bottom:1px dashed var(--accent-soft);
+  color:var(--accent); font-family:"Space Grotesk",Inter,sans-serif;
+  font-size:30px; font-weight:700; line-height:1.1; padding:0 0 2px;
+  font-variant-numeric:tabular-nums; cursor:pointer; max-width:100%;
+}
+.tn-select:focus{ outline:none; border-bottom-color:var(--accent); }
+.tn-select option{ background:var(--card); color:var(--ink); font-size:15px; }
+.tn-meta{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; }
+.tn-meta span{ color:var(--ink-dim); font-size:12px; }
