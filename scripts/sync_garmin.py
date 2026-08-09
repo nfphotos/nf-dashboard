@@ -159,7 +159,10 @@ def build_daily(api, today):
     }
 
 
-HISTORY_DAYS = 30
+# 90 rather than 30: the charts only draw the last 30, but the matchday
+# comparison needs enough shoot days to be worth reading. Same number of API
+# calls either way — the range endpoints take a start and an end.
+HISTORY_DAYS = 90
 
 
 def build_history(api, today):
