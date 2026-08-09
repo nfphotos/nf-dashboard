@@ -16,244 +16,633 @@
   "activities": [],
   "history": [
     {
+      "date": "2026-05-12",
+      "steps": 4439,
+      "stepGoal": 9000,
+      "restingHR": 65,
+      "sleepHours": 5.6
+    },
+    {
+      "date": "2026-05-13",
+      "steps": 5932,
+      "stepGoal": 9000,
+      "restingHR": 64,
+      "sleepHours": 8.1
+    },
+    {
+      "date": "2026-05-14",
+      "steps": 5434,
+      "stepGoal": 9000,
+      "restingHR": 64,
+      "sleepHours": 7.6
+    },
+    {
+      "date": "2026-05-15",
+      "steps": 12060,
+      "stepGoal": 9000,
+      "restingHR": 65,
+      "sleepHours": 6.1
+    },
+    {
+      "date": "2026-05-16",
+      "steps": 8852,
+      "stepGoal": 9000,
+      "restingHR": 65,
+      "sleepHours": 5.8
+    },
+    {
+      "date": "2026-05-17",
+      "steps": 3882,
+      "stepGoal": 9000,
+      "restingHR": 56,
+      "sleepHours": 8.0
+    },
+    {
+      "date": "2026-05-18",
+      "steps": 6870,
+      "stepGoal": 9000,
+      "restingHR": 56,
+      "sleepHours": 6.0
+    },
+    {
+      "date": "2026-05-19",
+      "steps": 5442,
+      "stepGoal": 9000,
+      "restingHR": 67,
+      "sleepHours": 6.1
+    },
+    {
+      "date": "2026-05-20",
+      "steps": 12234,
+      "stepGoal": 9000,
+      "restingHR": 66,
+      "sleepHours": 5.2
+    },
+    {
+      "date": "2026-05-21",
+      "steps": 10231,
+      "stepGoal": 9000,
+      "restingHR": 69,
+      "sleepHours": 7.1
+    },
+    {
+      "date": "2026-05-22",
+      "steps": 7264,
+      "stepGoal": 9000,
+      "restingHR": 61,
+      "sleepHours": 7.0
+    },
+    {
+      "date": "2026-05-23",
+      "steps": 8494,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 8.4
+    },
+    {
+      "date": "2026-05-24",
+      "steps": 11918,
+      "stepGoal": 9000,
+      "restingHR": 64,
+      "sleepHours": 9.2
+    },
+    {
+      "date": "2026-05-25",
+      "steps": 7148,
+      "stepGoal": 9000,
+      "restingHR": 64,
+      "sleepHours": 6.0
+    },
+    {
+      "date": "2026-05-26",
+      "steps": 10624,
+      "stepGoal": 9000,
+      "restingHR": 66,
+      "sleepHours": 5.8
+    },
+    {
+      "date": "2026-05-27",
+      "steps": 13094,
+      "stepGoal": 9000,
+      "restingHR": 59,
+      "sleepHours": 7.8
+    },
+    {
+      "date": "2026-05-28",
+      "steps": 10270,
+      "stepGoal": 9000,
+      "restingHR": 63,
+      "sleepHours": 7.5
+    },
+    {
+      "date": "2026-05-29",
+      "steps": 6718,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 6.1
+    },
+    {
+      "date": "2026-05-30",
+      "steps": 7506,
+      "stepGoal": 9000,
+      "restingHR": 58,
+      "sleepHours": 7.7
+    },
+    {
+      "date": "2026-05-31",
+      "steps": 10941,
+      "stepGoal": 9000,
+      "restingHR": 59,
+      "sleepHours": 7.5
+    },
+    {
+      "date": "2026-06-01",
+      "steps": 5256,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 6.7
+    },
+    {
+      "date": "2026-06-02",
+      "steps": 11426,
+      "stepGoal": 9000,
+      "restingHR": 55,
+      "sleepHours": 6.2
+    },
+    {
+      "date": "2026-06-03",
+      "steps": 17222,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 6.1
+    },
+    {
+      "date": "2026-06-04",
+      "steps": 13902,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 5.8
+    },
+    {
+      "date": "2026-06-05",
+      "steps": 5823,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 7.2
+    },
+    {
+      "date": "2026-06-06",
+      "steps": 16309,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 7.5
+    },
+    {
+      "date": "2026-06-07",
+      "steps": 10131,
+      "stepGoal": 9000,
+      "restingHR": 56,
+      "sleepHours": 7.6
+    },
+    {
+      "date": "2026-06-08",
+      "steps": 6327,
+      "stepGoal": 9000,
+      "restingHR": 56,
+      "sleepHours": 6.2
+    },
+    {
+      "date": "2026-06-09",
+      "steps": 6459,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 5.6
+    },
+    {
+      "date": "2026-06-10",
+      "steps": 9144,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 5.8
+    },
+    {
+      "date": "2026-06-11",
+      "steps": 8351,
+      "stepGoal": 9000,
+      "restingHR": 56,
+      "sleepHours": 7.2
+    },
+    {
+      "date": "2026-06-12",
+      "steps": 6067,
+      "stepGoal": 9000,
+      "restingHR": 62,
+      "sleepHours": 6.2
+    },
+    {
+      "date": "2026-06-13",
+      "steps": 7841,
+      "stepGoal": 9000,
+      "restingHR": 61,
+      "sleepHours": 5.8
+    },
+    {
+      "date": "2026-06-14",
+      "steps": 5715,
+      "stepGoal": 9000,
+      "restingHR": 61,
+      "sleepHours": 7.8
+    },
+    {
+      "date": "2026-06-15",
+      "steps": 6998,
+      "stepGoal": 9000,
+      "restingHR": 55,
+      "sleepHours": 6.0
+    },
+    {
+      "date": "2026-06-16",
+      "steps": 4835,
+      "stepGoal": 9000,
+      "restingHR": 58,
+      "sleepHours": 5.9
+    },
+    {
+      "date": "2026-06-17",
+      "steps": 7796,
+      "stepGoal": 9000,
+      "restingHR": 65,
+      "sleepHours": 6.5
+    },
+    {
+      "date": "2026-06-18",
+      "steps": 8772,
+      "stepGoal": 9000,
+      "restingHR": 62,
+      "sleepHours": 7.4
+    },
+    {
+      "date": "2026-06-19",
+      "steps": 4182,
+      "stepGoal": 9000,
+      "restingHR": 63,
+      "sleepHours": 8.0
+    },
+    {
+      "date": "2026-06-20",
+      "steps": 5863,
+      "stepGoal": 9000,
+      "restingHR": 54,
+      "sleepHours": 7.0
+    },
+    {
+      "date": "2026-06-21",
+      "steps": 6561,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 8.9
+    },
+    {
+      "date": "2026-06-22",
+      "steps": 11896,
+      "stepGoal": 9000,
+      "restingHR": 75,
+      "sleepHours": 5.5
+    },
+    {
+      "date": "2026-06-23",
+      "steps": 8877,
+      "stepGoal": 9000,
+      "restingHR": 53,
+      "sleepHours": 5.5
+    },
+    {
+      "date": "2026-06-24",
+      "steps": 3261,
+      "stepGoal": 9000,
+      "restingHR": 58,
+      "sleepHours": 6.8
+    },
+    {
+      "date": "2026-06-25",
+      "steps": 12422,
+      "stepGoal": 9000,
+      "restingHR": 64,
+      "sleepHours": 6.5
+    },
+    {
+      "date": "2026-06-26",
+      "steps": 12203,
+      "stepGoal": 9000,
+      "restingHR": 55,
+      "sleepHours": 7.1
+    },
+    {
+      "date": "2026-06-27",
+      "steps": 7787,
+      "stepGoal": 9000,
+      "restingHR": 66,
+      "sleepHours": 7.7
+    },
+    {
+      "date": "2026-06-28",
+      "steps": 6368,
+      "stepGoal": 9000,
+      "restingHR": 53,
+      "sleepHours": 9.4
+    },
+    {
+      "date": "2026-06-29",
+      "steps": 7150,
+      "stepGoal": 9000,
+      "restingHR": 68,
+      "sleepHours": 7.8
+    },
+    {
+      "date": "2026-06-30",
+      "steps": 6484,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 6.4
+    },
+    {
+      "date": "2026-07-01",
+      "steps": 4816,
+      "stepGoal": 9000,
+      "restingHR": 63,
+      "sleepHours": 6.2
+    },
+    {
+      "date": "2026-07-02",
+      "steps": 12680,
+      "stepGoal": 9000,
+      "restingHR": 57,
+      "sleepHours": 6.1
+    },
+    {
+      "date": "2026-07-03",
+      "steps": 6278,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 6.2
+    },
+    {
+      "date": "2026-07-04",
+      "steps": 9188,
+      "stepGoal": 9000,
+      "restingHR": 64,
+      "sleepHours": 6.9
+    },
+    {
+      "date": "2026-07-05",
+      "steps": 6079,
+      "stepGoal": 9000,
+      "restingHR": 63,
+      "sleepHours": 7.3
+    },
+    {
+      "date": "2026-07-06",
+      "steps": 5627,
+      "stepGoal": 9000,
+      "restingHR": 62,
+      "sleepHours": 8.1
+    },
+    {
+      "date": "2026-07-07",
+      "steps": 6881,
+      "stepGoal": 9000,
+      "restingHR": 39
+    },
+    {
+      "date": "2026-07-08",
+      "steps": 6113,
+      "stepGoal": 9000,
+      "restingHR": 59,
+      "sleepHours": 5.3
+    },
+    {
+      "date": "2026-07-09",
+      "steps": 6384,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 5.4
+    },
+    {
+      "date": "2026-07-10",
+      "steps": 8104,
+      "stepGoal": 9000,
+      "restingHR": 55,
+      "sleepHours": 6.9
+    },
+    {
       "date": "2026-07-11",
       "steps": 5415,
       "stepGoal": 9000,
       "restingHR": 59,
-      "sleepHours": 7.4,
-      "bodyBatteryPeak": 45
+      "sleepHours": 7.4
     },
     {
       "date": "2026-07-12",
       "steps": 6547,
       "stepGoal": 9000,
       "restingHR": 63,
-      "sleepHours": 7.9,
-      "bodyBatteryPeak": 31
+      "sleepHours": 7.9
     },
     {
       "date": "2026-07-13",
       "steps": 9472,
       "stepGoal": 9000,
       "restingHR": 58,
-      "sleepHours": 7.8,
-      "bodyBatteryPeak": 16
+      "sleepHours": 7.8
     },
     {
       "date": "2026-07-14",
       "steps": 9146,
       "stepGoal": 9000,
       "restingHR": 55,
-      "sleepHours": 6.0,
-      "bodyBatteryPeak": 59
+      "sleepHours": 6.0
     },
     {
       "date": "2026-07-15",
       "steps": 14234,
       "stepGoal": 9000,
       "restingHR": 54,
-      "sleepHours": 5.4,
-      "bodyBatteryPeak": 15
+      "sleepHours": 5.4
     },
     {
       "date": "2026-07-16",
       "steps": 5596,
       "stepGoal": 9000,
       "restingHR": 53,
-      "sleepHours": 7.5,
-      "bodyBatteryPeak": 67
+      "sleepHours": 7.5
     },
     {
       "date": "2026-07-17",
       "steps": 12187,
       "stepGoal": 9000,
       "restingHR": 61,
-      "sleepHours": 7.0,
-      "bodyBatteryPeak": 28
+      "sleepHours": 7.0
     },
     {
       "date": "2026-07-18",
       "steps": 9759,
       "stepGoal": 9000,
       "restingHR": 56,
-      "sleepHours": 8.3,
-      "bodyBatteryPeak": 40
+      "sleepHours": 8.3
     },
     {
       "date": "2026-07-19",
       "steps": 3014,
       "stepGoal": 9000,
       "restingHR": 70,
-      "sleepHours": 8.5,
-      "bodyBatteryPeak": 7
+      "sleepHours": 8.5
     },
     {
       "date": "2026-07-20",
       "steps": 6445,
       "stepGoal": 9000,
       "restingHR": 53,
-      "sleepHours": 7.8,
-      "bodyBatteryPeak": 62
+      "sleepHours": 7.8
     },
     {
       "date": "2026-07-21",
       "steps": 5880,
       "stepGoal": 9000,
       "restingHR": 57,
-      "sleepHours": 6.7,
-      "bodyBatteryPeak": 35
+      "sleepHours": 6.7
     },
     {
       "date": "2026-07-22",
       "steps": 4177,
       "stepGoal": 9000,
       "restingHR": 63,
-      "sleepHours": 8.4,
-      "bodyBatteryPeak": 32
+      "sleepHours": 8.4
     },
     {
       "date": "2026-07-23",
       "steps": 5410,
       "stepGoal": 9000,
       "restingHR": 59,
-      "sleepHours": 9.1,
-      "bodyBatteryPeak": 49
+      "sleepHours": 9.1
     },
     {
       "date": "2026-07-24",
       "steps": 5230,
       "stepGoal": 9000,
       "restingHR": 59,
-      "sleepHours": 8.4,
-      "bodyBatteryPeak": 40
+      "sleepHours": 8.4
     },
     {
       "date": "2026-07-25",
       "steps": 6630,
       "stepGoal": 9000,
       "restingHR": 59,
-      "sleepHours": 9.3,
-      "bodyBatteryPeak": 72
+      "sleepHours": 9.3
     },
     {
       "date": "2026-07-26",
       "steps": 10066,
       "stepGoal": 9000,
       "restingHR": 56,
-      "sleepHours": 7.9,
-      "bodyBatteryPeak": 68
+      "sleepHours": 7.9
     },
     {
       "date": "2026-07-27",
       "steps": 8851,
       "stepGoal": 9000,
       "restingHR": 55,
-      "sleepHours": 5.7,
-      "bodyBatteryPeak": 51
+      "sleepHours": 5.7
     },
     {
       "date": "2026-07-28",
       "steps": 5333,
       "stepGoal": 9000,
       "restingHR": 55,
-      "sleepHours": 5.0,
-      "bodyBatteryPeak": 39
+      "sleepHours": 5.0
     },
     {
       "date": "2026-07-29",
       "steps": 5712,
       "stepGoal": 9000,
       "restingHR": 58,
-      "sleepHours": 5.0,
-      "bodyBatteryPeak": 21
+      "sleepHours": 5.0
     },
     {
       "date": "2026-07-30",
       "steps": 6269,
       "stepGoal": 9000,
       "restingHR": 54,
-      "sleepHours": 7.6,
-      "bodyBatteryPeak": 71
+      "sleepHours": 7.6
     },
     {
       "date": "2026-07-31",
       "steps": 3826,
       "stepGoal": 9000,
       "restingHR": 58,
-      "sleepHours": 8.4,
-      "bodyBatteryPeak": 56
+      "sleepHours": 8.4
     },
     {
       "date": "2026-08-01",
       "steps": 9604,
       "stepGoal": 9000,
       "restingHR": 53,
-      "sleepHours": 8.2,
-      "bodyBatteryPeak": 64
+      "sleepHours": 8.2
     },
     {
       "date": "2026-08-02",
       "steps": 7516,
       "stepGoal": 9000,
       "restingHR": 53,
-      "sleepHours": 6.5,
-      "bodyBatteryPeak": 55
+      "sleepHours": 6.5
     },
     {
       "date": "2026-08-03",
       "steps": 5449,
       "stepGoal": 9000,
       "restingHR": 59,
-      "sleepHours": 5.7,
-      "bodyBatteryPeak": 23
+      "sleepHours": 5.7
     },
     {
       "date": "2026-08-04",
       "steps": 6410,
       "stepGoal": 9000,
       "restingHR": 51,
-      "sleepHours": 5.0,
-      "bodyBatteryPeak": 48
+      "sleepHours": 5.0
     },
     {
       "date": "2026-08-05",
       "steps": 6078,
       "stepGoal": 9000,
       "restingHR": 56,
-      "sleepHours": 5.2,
-      "bodyBatteryPeak": 32
+      "sleepHours": 5.2
     },
     {
       "date": "2026-08-06",
       "steps": 6152,
       "stepGoal": 9000,
       "restingHR": 56,
-      "sleepHours": 6.7,
-      "bodyBatteryPeak": 46
+      "sleepHours": 6.7
     },
     {
       "date": "2026-08-07",
       "steps": 5963,
       "stepGoal": 9000,
       "restingHR": 58,
-      "sleepHours": 8.8,
-      "bodyBatteryPeak": 54
+      "sleepHours": 8.8
     },
     {
       "date": "2026-08-08",
       "steps": 6039,
       "stepGoal": 9000,
       "restingHR": 52,
-      "sleepHours": 9.4,
-      "bodyBatteryPeak": 81
+      "sleepHours": 9.4
     },
     {
       "date": "2026-08-09",
       "steps": 3823,
       "stepGoal": 9000,
       "restingHR": 59,
-      "sleepHours": 9.1,
-      "bodyBatteryPeak": 18
+      "sleepHours": 9.1
     }
   ]
 }
