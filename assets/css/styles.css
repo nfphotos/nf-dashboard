@@ -214,3 +214,9 @@ main{padding:14px 12px 30px}
   .span2{grid-column:span 2}
   main{max-width:940px;margin:0 auto}
 }
+
+/* Readiness provenance — says what the number actually is */
+.rb-source{
+  display:block; margin-top:6px;
+  color:var(--muted); font-size:11px; line-height:1.35;
+}

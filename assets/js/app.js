@@ -62,9 +62,14 @@ function renderGarmin(g) {
   set("f-vo2", d.vo2max);
   set("f-load", d.trainingLoad);
 
-  // Readiness ring + advice
+  // Readiness ring + advice.
+  // Stale data is worse than no data: an old number silently reads as today's.
+  // (A broken sync served June's figures behind a green tick for eight weeks.)
+  const daysOld = d.date ? Math.round((new Date().setHours(0,0,0,0) - new Date(d.date + "T00:00:00")) / 86400000) : null;
+  const stale = daysOld == null || daysOld > 1;
+
   const score = d.readiness ?? d.bodyBatteryHigh ?? null;
-  if (score != null) {
+  if (score != null && !stale) {
     $("#rb-ring").style.setProperty("--p", score);
     $("#rb-score").textContent = score;
     const { highThreshold: hi, lowThreshold: lo } = CONFIG.readiness;
@@ -74,8 +79,20 @@ function renderGarmin(g) {
     else { title = "Steady"; type = "moderate"; advice = "Moderate readiness. Solid working session, leave a rep in the tank."; }
     $("#rb-title").textContent = title;
     $("#rb-advice").textContent = advice;
+    // Say what the number actually is. The Instinct doesn't report Garmin's
+    // Training Readiness, so this is usually Body Battery peak so far today.
+    $("#rb-source").textContent = d.readinessSource === "bodyBattery"
+      ? "Body Battery peak today · Instinct doesn't report Training Readiness"
+      : "Garmin Training Readiness";
     BRIEF.readiness = { title, advice };
     renderWorkout(type);
+  } else if (stale) {
+    $("#rb-score").textContent = "—";
+    $("#rb-title").textContent = "No fresh data";
+    $("#rb-advice").textContent = daysOld == null
+      ? "Garmin hasn't synced yet."
+      : `Last Garmin sync was ${daysOld} days ago — not showing a stale number.`;
+    $("#rb-source").textContent = "";
   }
 
   // Activities
