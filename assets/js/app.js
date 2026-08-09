@@ -114,7 +114,7 @@ function shortDate(iso) {
 }
 
 /** Shared scaffolding: scales, neutral goal line, hover targets, tooltip. */
-function chartFrame(rows, { value, goal, fmtValue, label }) {
+function chartFrame(rows, { value, goal, fmtValue, label, labelKey }) {
   const { w, h, padT, padB } = CHART;
   const plotH = h - padT - padB;
   const vals = rows.map(value).filter(v => v != null);
@@ -130,11 +130,14 @@ function chartFrame(rows, { value, goal, fmtValue, label }) {
   const x = i => (i + 0.5) * (w / rows.length);
   const y = v => padT + plotH - ((v - lo) / (hi - lo)) * plotH;
 
+  // Weekday charts pass labelKey ("Mon"); date charts fall back to the ISO date.
+  const rowLabel = r => labelKey ? r[labelKey] : shortDate(r.date);
+
   const hover = rows.map((r, i) => {
     const v = value(r);
     if (v == null) return "";
     return `<rect class="ch-hit" x="${i * (w / rows.length)}" y="0" width="${w / rows.length}" height="${h}"
-      data-label="${esc(shortDate(r.date))}" data-value="${esc(fmtValue(v))}"></rect>`;
+      data-label="${esc(rowLabel(r))}" data-value="${esc(fmtValue(v))}"></rect>`;
   }).join("");
 
   // Put the goal label on whichever end has the shorter marks, so it can't
@@ -209,6 +212,92 @@ function attachTooltip(el) {
     hit.addEventListener("touchstart", show, { passive: true });
     hit.addEventListener("mouseleave", () => { tip.hidden = true; });
   });
+}
+
+/* ---------- Sleep by weekday -----------------------------------------
+   Clock times need circular means: the average of 23:50 and 00:10 is
+   00:00, not 12:00. A plain arithmetic mean put "bedtime" at 16:00 and
+   reported a 17-hour standard deviation.
+--------------------------------------------------------------------- */
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function circMean(minutes) {
+  if (!minutes.length) return null;
+  const ang = minutes.map(m => (m / 1440) * 2 * Math.PI);
+  const x = ang.reduce((s, a) => s + Math.cos(a), 0) / ang.length;
+  const y = ang.reduce((s, a) => s + Math.sin(a), 0) / ang.length;
+  return ((Math.atan2(y, x) / (2 * Math.PI)) * 1440 + 1440) % 1440;
+}
+
+const clock = m => m == null ? "—"
+  : `${String(Math.floor(Math.round(m) / 60) % 24).padStart(2, "0")}:${String(Math.round(m) % 60).padStart(2, "0")}`;
+
+function renderWeekday(history) {
+  const card = $("#weekday-card");
+  if (!card || !Array.isArray(history) || history.length < 21) return;
+
+  const buckets = DAY_NAMES.map(() => ({ dur: [], bed: [], wake: [] }));
+  history.forEach(h => {
+    if (h.sleepHours == null) return;
+    // getUTCDay on a UTC-parsed date: 0=Sun, so shift to Mon-first.
+    const idx = (new Date(h.date + "T00:00:00Z").getUTCDay() + 6) % 7;
+    buckets[idx].dur.push(h.sleepHours);
+    if (h.bedMin != null) buckets[idx].bed.push(h.bedMin);
+    if (h.wakeMin != null) buckets[idx].wake.push(h.wakeMin);
+  });
+
+  const rows = DAY_NAMES.map((name, i) => ({
+    date: name,                                   // chartFrame labels off .date
+    day: name,
+    n: buckets[i].dur.length,
+    sleepHours: buckets[i].dur.length
+      ? buckets[i].dur.reduce((a, b) => a + b, 0) / buckets[i].dur.length : null,
+    bed: circMean(buckets[i].bed),
+    wake: circMean(buckets[i].wake),
+  }));
+  if (rows.every(r => r.sleepHours == null)) return;
+
+  const goal = CONFIG.goals?.sleepHours ?? null;
+  barChart($("#ch-weekday"), rows, {
+    value: r => r.sleepHours,
+    goal,
+    fmtValue: v => `${v.toFixed(1)}h`,
+    label: goal ? `${goal}h target` : "",
+    labelKey: "day",
+  });
+
+  $("#wd-table").innerHTML =
+    `<table class="md wd"><tr><th></th>${rows.map(r => `<th>${r.day}</th>`).join("")}</tr>` +
+    `<tr><th>Asleep</th>${rows.map(r => `<td>${clock(r.bed)}</td>`).join("")}</tr>` +
+    `<tr><th>Woke</th>${rows.map(r => `<td>${clock(r.wake)}</td>`).join("")}</tr></table>`;
+
+  const withSleep = rows.filter(r => r.sleepHours != null);
+  const best = withSleep.reduce((a, b) => b.sleepHours > a.sleepHours ? b : a);
+  const worst = withSleep.reduce((a, b) => b.sleepHours < a.sleepHours ? b : a);
+  $("#wd-spread").textContent = `${(best.sleepHours - worst.sleepHours).toFixed(1)}h spread`;
+
+  // Is the variation coming from bedtime or wake time?
+  // Measure spread on an axis anchored at 18:00, so a 00:08 bedtime sits just
+  // after 23:53 rather than 23h45m "before" it. Raw min/max on clock minutes
+  // reported a 23.7h bedtime range and silently suppressed this sentence.
+  const fromEvening = m => (m - 18 * 60 + 1440) % 1440;
+  const toClock = s => (s + 18 * 60) % 1440;
+  const spreadOf = a => {
+    const s = a.map(fromEvening).sort((p, q) => p - q);
+    return { range: s[s.length - 1] - s[0], first: toClock(s[0]), last: toClock(s[s.length - 1]) };
+  };
+
+  const beds = rows.map(r => r.bed).filter(v => v != null);
+  const wakes = rows.map(r => r.wake).filter(v => v != null);
+  let read = `${worst.day} is your shortest night at ${worst.sleepHours.toFixed(1)}h; ${best.day} your longest at ${best.sleepHours.toFixed(1)}h.`;
+  if (beds.length === 7 && wakes.length === 7) {
+    const b = spreadOf(beds), w = spreadOf(wakes);
+    if (w.range > b.range) {
+      read += ` Your bedtime barely moves (${clock(b.first)}–${clock(b.last)}, ${(b.range / 60).toFixed(1)}h of drift) — it's the <em>wake</em> time that swings, by ${(w.range / 60).toFixed(1)}h.`;
+    }
+  }
+  $("#wd-read").innerHTML = read;
+  card.hidden = false;
 }
 
 /* ---------- Matchday impact ------------------------------------------
@@ -676,6 +765,7 @@ async function boot() {
   renderGarmin(g); renderPhoto(p); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
   renderSessions();
+  renderWeekday(g?.history);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data
   renderBriefing();   // after readiness + fixture are populated
   if (meta?.lastSync) $("#last-sync").textContent = "Last sync: " +

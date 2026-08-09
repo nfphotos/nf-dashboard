@@ -197,8 +197,20 @@ def build_history(api, today):
         d = row.get("calendarDate")
         vals = row.get("values") or {}
         secs = vals.get("totalSleepTimeInSeconds")
-        if d and secs:
-            slot(d)["sleepHours"] = round(secs / 3600, 1)
+        if not d or not secs:
+            continue
+        slot(d)["sleepHours"] = round(secs / 3600, 1)
+
+        # Bed and wake clock times, as minutes past local midnight. Nick's
+        # bedtime turns out to be near-fixed (23:16-23:31 on weeknights) while
+        # his wake time swings by 90 min — so the times matter more than the
+        # duration for working out where the sleep is actually going.
+        for key, field in (("bedMin", "localSleepStartTimeInMillis"),
+                           ("wakeMin", "localSleepEndTimeInMillis")):
+            ms = vals.get(field)
+            if ms:
+                t = datetime.datetime.fromtimestamp(ms / 1000, datetime.timezone.utc)
+                slot(d)[key] = t.hour * 60 + t.minute
 
     # Daily Body Battery peak — "how charged did I actually get today".
     # The intraday array is only ~6 points a day for this watch, far too coarse

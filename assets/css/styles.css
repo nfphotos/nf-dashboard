@@ -291,3 +291,9 @@ table.md td.md-worst{ color:var(--amber); font-weight:600; }
   font-size:12px; padding:0 0 0 8px;
 }
 .mini-x:hover{ color:var(--neg); }
+
+/* Weekday table sits under its chart — 7 narrow columns */
+table.md.wd{ margin-top:10px; font-size:12px; }
+table.md.wd th, table.md.wd td{ padding:5px 2px; text-align:center; }
+table.md.wd tr th:first-child{ text-align:left; white-space:nowrap; }
+table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
