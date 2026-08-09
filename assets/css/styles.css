@@ -408,3 +408,30 @@ table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
 .tn-select option{ background:var(--card); color:var(--ink); font-size:15px; }
 .tn-meta{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; }
 .tn-meta span{ color:var(--ink-dim); font-size:12px; }
+
+/* ---------- NF Tools (Mac app only) -------------------------------- */
+.tools-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:4px 0 10px; }
+.tool-btn{
+  display:flex; flex-direction:column; gap:3px; text-align:left;
+  padding:11px 12px; border-radius:11px; cursor:pointer; font:inherit;
+  background:var(--card-2); border:1px solid var(--line); color:var(--ink);
+  transition:border-color .12s, transform .08s;
+}
+.tool-btn strong{ font-size:13px; }
+.tool-btn small{ color:var(--ink-dim); font-size:11px; line-height:1.35; }
+.tool-btn:hover:not(:disabled){ border-color:var(--accent); }
+.tool-btn:active:not(:disabled){ transform:scale(.98); }
+.tool-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+.tool-run{ margin-top:4px; }
+.tool-run-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.tool-run-head strong{ font-size:13px; }
+.tool-status{ color:var(--ink-dim); font-size:11px; margin-right:auto; }
+.tool-status.ok{ color:var(--pos); }
+.tool-status.bad{ color:var(--neg); }
+.tool-log{
+  margin:0; padding:10px; border-radius:9px; max-height:220px; overflow:auto;
+  background:var(--bg); border:1px solid var(--line);
+  color:var(--ink-dim); font-family:ui-monospace,Menlo,monospace;
+  font-size:11px; line-height:1.45; white-space:pre-wrap; word-break:break-word;
+}

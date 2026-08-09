@@ -435,6 +435,66 @@ function renderCheckin(history, calendar) {
   };
 }
 
+/* ---------- NF Photography Tools (Mac app only) ----------------------
+   These shell out to local Python over folders of RAWs and 4K clips, so
+   they only exist where the files and the interpreter do. On the phone
+   window.NF is undefined and the card never appears — a button that
+   cannot work is worse than no button.
+--------------------------------------------------------------------- */
+let toolUnsubscribe = [];
+
+async function renderTools() {
+  const card = $("#tools-card");
+  if (!card || !window.NF?.isDesktop) return;      // web + Android: stay hidden
+
+  // The renderer re-runs on every data refresh; without this the IPC
+  // listeners stack and every line of output prints N times.
+  toolUnsubscribe.forEach(fn => fn());
+  toolUnsubscribe = [];
+
+  const tools = await window.NF.tools.list();
+  $("#tools-grid").innerHTML = tools.map(t => `
+    <button class="tool-btn" data-tool="${t.id}" ${t.available ? "" : "disabled"}>
+      <strong>${esc(t.name)}</strong>
+      <small>${t.available ? esc(t.desc) : "not found on disk"}</small>
+    </button>`).join("");
+
+  const panel = $("#tool-run"), log = $("#tool-log"), status = $("#tool-run-status");
+
+  $("#tools-grid").querySelectorAll(".tool-btn").forEach(b =>
+    b.addEventListener("click", async () => {
+      const id = b.dataset.tool;
+      const tool = tools.find(t => t.id === id);
+      const res = await window.NF.tools.run(id);
+
+      if (tool.kind === "open") return;            // invoice just opens in the browser
+      if (!res.ok) { status.textContent = res.error || "could not start"; panel.hidden = false; return; }
+
+      $("#tool-run-name").textContent = tool.name;
+      status.textContent = "running…";
+      status.className = "tool-status";
+      log.textContent = "";
+      panel.hidden = false;
+      $("#tool-stop").hidden = false;
+      $("#tool-stop").onclick = () => window.NF.tools.stop(id);
+    }));
+
+  toolUnsubscribe.push(window.NF.tools.onOutput(({ text }) => {
+    log.textContent += text;
+    log.scrollTop = log.scrollHeight;              // follow the tail
+  }));
+
+  toolUnsubscribe.push(window.NF.tools.onDone(({ code, error }) => {
+    status.textContent = error ? `failed — ${error}`
+      : code === 0 ? "finished" : `exited with code ${code}`;
+    status.className = "tool-status " + (code === 0 ? "ok" : "bad");
+    $("#tool-stop").hidden = true;
+  }));
+
+  $("#tools-reveal").onclick = () => window.NF.tools.reveal();
+  card.hidden = false;
+}
+
 /* ---------- Stress & recovery ----------------------------------------
    The one stream that speaks to mental load rather than movement, and it
    was going unused. Garmin's bands are 0-25 rest, 26-50 low, 51-75
@@ -1375,6 +1435,7 @@ async function boot() {
   renderWhatChanged(g?.history);
   renderRegularity(g?.history);
   renderCheckin(g?.history, cal);
+  renderTools();
   renderTonight(g?.history, cal);
   renderWeekday(g?.history);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data

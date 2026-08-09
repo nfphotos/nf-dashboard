@@ -245,6 +245,22 @@
         <h3>Upcoming matches &amp; events <span class="pill" id="w-cal-pill">Google Calendar</span></h3>
         <ul class="list" id="w-upcoming"><li class="muted">Syncing from Google Calendar…</li></ul>
       </article>
+      <!-- Mac app only: these drive local Python over local files, so the
+           card stays hidden on the phone rather than offering dead buttons. -->
+      <article class="card" id="tools-card" hidden>
+        <h3>Tools <button class="mini-btn" id="tools-reveal">open folder</button></h3>
+        <div class="tools-grid" id="tools-grid"></div>
+        <div class="tool-run" id="tool-run" hidden>
+          <div class="tool-run-head">
+            <strong id="tool-run-name">—</strong>
+            <span class="tool-status" id="tool-run-status">running…</span>
+            <button class="mini-btn" id="tool-stop">stop</button>
+          </div>
+          <pre class="tool-log" id="tool-log"></pre>
+        </div>
+        <small class="muted">Each tool asks for its folder when it starts. Output appears here.</small>
+      </article>
+
       <article class="card">
         <h3>Latest work</h3>
         <div class="gallery" id="w-gallery"><p class="muted">Add image URLs in data/photography.json.</p></div>

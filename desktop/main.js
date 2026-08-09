@@ -9,10 +9,93 @@
 //  registers a service worker — both of which file:// forbids.
 //  http://127.0.0.1 counts as a secure context, so both work.
 // =====================================================================
-const { app, BrowserWindow, Tray, Menu, shell, nativeImage } = require("electron");
+const { app, BrowserWindow, Tray, Menu, shell, nativeImage, ipcMain } = require("electron");
+const { spawn } = require("child_process");
 const http = require("http");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+
+// =====================================================================
+//  NF Photography Tools
+//
+//  Each tool ships as a self-contained .command that builds its own venv,
+//  installs its own dependencies and asks for a folder via an AppleScript
+//  dialog. We run those scripts unchanged rather than reimplementing the
+//  Python invocation — they work, and duplicating their setup logic here
+//  would be two things to keep in step.
+//
+//  What the app adds is one place to launch them from and live output,
+//  instead of a Terminal window per tool.
+// =====================================================================
+const TOOLS_ROOT = path.join(os.homedir(), "Documents", "Claude", "NF Photography Tools");
+
+const TOOLS = [
+  { id: "cull",     name: "Auto-crop",       desc: "Tight subject crops into XMP sidecars",  script: "nf-cull/Crop Photos.command" },
+  { id: "reel",     name: "POV reel",        desc: "Auto-culled 9:16 reel from raw clips",   script: "nf-reel/NF Reel.command" },
+  { id: "overlays", name: "TVM overlays",    desc: "Burn in the TVM carousel overlays",      script: "nf-tvm-overlays/TVM Overlays.command" },
+  { id: "carousel", name: "Carousel split",  desc: "16:10 into two seamless 4:5 halves",     script: "nf-carousel/Carousel Split.command" },
+  { id: "ratio",    name: "Sort by ratio",   desc: "Group exports into aspect-ratio folders", script: "nf-sort-ratio/Sort by Ratio.command" },
+  { id: "invoice",  name: "Invoice",         desc: "Branded invoice generator",              open: "nf-invoice/Invoice Generator.html" },
+];
+
+/** Only offer what's actually on disk — a button that can't work is worse
+ *  than no button. */
+function listTools() {
+  return TOOLS.map(t => {
+    const rel = t.script || t.open;
+    const full = path.join(TOOLS_ROOT, rel);
+    return { id: t.id, name: t.name, desc: t.desc, kind: t.script ? "run" : "open", available: fs.existsSync(full) };
+  });
+}
+
+const running = new Map();   // id -> ChildProcess
+
+function runTool(id, sender) {
+  const tool = TOOLS.find(t => t.id === id);
+  if (!tool) return { ok: false, error: "Unknown tool" };
+
+  if (tool.open) {
+    shell.openPath(path.join(TOOLS_ROOT, tool.open));
+    return { ok: true, opened: true };
+  }
+  if (running.has(id)) return { ok: false, error: "Already running" };
+
+  const full = path.join(TOOLS_ROOT, tool.script);
+  if (!fs.existsSync(full)) return { ok: false, error: `Not found: ${tool.script}` };
+
+  // bash, not `open` — `open` detaches into Terminal and we lose the output.
+  const child = spawn("/bin/bash", [full], {
+    cwd: path.dirname(full),
+    env: { ...process.env, TERM: "dumb" },   // stop the scripts emitting colour escapes
+  });
+  running.set(id, child);
+
+  const send = (stream, text) => {
+    if (!sender.isDestroyed()) sender.send("tool:output", { id, stream, text });
+  };
+  child.stdout.on("data", d => send("out", d.toString()));
+  child.stderr.on("data", d => send("err", d.toString()));
+  child.on("close", code => {
+    running.delete(id);
+    if (!sender.isDestroyed()) sender.send("tool:done", { id, code });
+  });
+  child.on("error", e => {
+    running.delete(id);
+    if (!sender.isDestroyed()) sender.send("tool:done", { id, code: -1, error: e.message });
+  });
+
+  return { ok: true };
+}
+
+ipcMain.handle("tools:list", () => listTools());
+ipcMain.handle("tools:run", (e, id) => runTool(id, e.sender));
+ipcMain.handle("tools:stop", (e, id) => {
+  const c = running.get(id);
+  if (c) { c.kill("SIGTERM"); return { ok: true }; }
+  return { ok: false };
+});
+ipcMain.handle("tools:reveal", () => { shell.openPath(TOOLS_ROOT); return { ok: true }; });
 
 // In a packaged app the web files are copied into Resources/web.
 // In development they are simply the repo root, one level up.
