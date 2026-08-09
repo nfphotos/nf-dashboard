@@ -3,3 +3,15 @@ __pycache__/
 *.pyc
 .garminconnect/
 .env
+
+# Mac app (Electron) — build artefacts, never published to Pages
+desktop/node_modules/
+desktop/release/
+desktop/package-lock.json
+
+# Local python env
+.venv/
+
+# Garmin token material. This repo is PUBLIC — these must never be committed.
+garmin_token_base64.txt
+garmin_tokens.json

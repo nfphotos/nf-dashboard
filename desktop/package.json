@@ -1,0 +1,37 @@
+{
+  "name": "nf-command-centre",
+  "productName": "NF Command Centre",
+  "version": "1.0.0",
+  "description": "NF Command Centre — Mac app shell for the dashboard, with a menu-bar companion.",
+  "main": "main.js",
+  "author": "Nicholas Falzon",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --dir",
+    "pack": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.nfphotography.commandcentre",
+    "productName": "NF Command Centre",
+    "directories": { "output": "release" },
+    "files": ["main.js", "preload.js", "assets/**"],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "web",
+        "filter": ["index.html", "manifest.webmanifest", "sw.js", "assets/**", "data/**"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg"],
+      "icon": "assets/icon.icns"
+    }
+  }
+}

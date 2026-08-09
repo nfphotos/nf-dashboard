@@ -2,7 +2,7 @@ name: Sync Garmin
 
 on:
   schedule:
-    - cron: "30 5 * * *"   # 05:30 UTC daily (~07:30 Malta summer). Adjust as you like.
+    - cron: "30 5 * * *"   # 05:30 UTC daily (~07:30 Malta summer)
   workflow_dispatch: {}      # lets you run it manually from the Actions tab
 
 permissions:
@@ -16,16 +16,28 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12"   # garminconnect 0.3.x requires >= 3.12
 
       - name: Install deps
         run: pip install -r scripts/requirements.txt
 
+      # Token-based auth only. Credentials are deliberately NOT passed here:
+      # a cron job doing credential logins gets the Garmin account rate-limited
+      # and locked for 48-72 hours. See scripts/mint_garmin_tokens.py.
       - name: Pull Garmin data
+        id: fetch
         env:
-          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GARMINTOKENS_BASE64: ${{ secrets.GARMINTOKENS_BASE64 }}
         run: python scripts/sync_garmin.py
+
+      # Garmin rotates the refresh token. Without writing the new one back,
+      # the stored secret goes stale and the sync dies a few days later.
+      # Optional: needs a PAT with secrets:write. Skipped silently if absent.
+      - name: Persist rotated token
+        if: steps.fetch.outputs.rotated == 'true' && env.GH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN_ROTATION_PAT }}
+        run: gh secret set GARMINTOKENS_BASE64 --repo ${{ github.repository }} < /tmp/garmin_tokens.b64
 
       - name: Commit if changed
         run: |

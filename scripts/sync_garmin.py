@@ -1,92 +1,227 @@
 #!/usr/bin/env python3
 """
-Pull daily health + recent activities from Garmin Connect and write
-data/garmin.json + update data/meta.json.
+Pull daily health + recent activities from Garmin Connect into data/garmin.json.
 
-Runs in GitHub Actions on a schedule. Credentials come from env/secrets:
-  GARMIN_EMAIL, GARMIN_PASSWORD
+AUTH: token only. Never credentials.
+------------------------------------
+Since March 2026 Garmin rate-limits logins per *account*, and repeated
+programmatic logins get the whole account locked for 48-72 hours. So this
+script deliberately constructs Garmin() with no email/password: if the token
+is bad it fails loudly instead of quietly falling back to a credential login
+and burning the account's login budget.
 
-Local test:  GARMIN_EMAIL=... GARMIN_PASSWORD=... python scripts/sync_garmin.py
+Mint the token locally with scripts/mint_garmin_tokens.py, then store it as
+the GARMINTOKENS_BASE64 repo secret.
+
+Local test:
+    GARMINTOKENS_BASE64=$(base64 -i ~/.garminconnect/garmin_tokens.json | tr -d '\\n') \\
+        python scripts/sync_garmin.py
 """
-import os, json, datetime, sys, pathlib
+import base64
+import datetime
+import json
+import os
+import pathlib
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
+TOKENSTORE = pathlib.Path("~/.garminconnect").expanduser()
 
-def main():
-    email = os.environ.get("GARMIN_EMAIL")
-    pw = os.environ.get("GARMIN_PASSWORD")
-    if not email or not pw:
-        print("Missing GARMIN_EMAIL / GARMIN_PASSWORD — skipping.", file=sys.stderr)
-        return 0
 
-    from garminconnect import Garmin
+def fail(msg):
+    """Exit non-zero so the workflow goes red.
 
-    api = Garmin(email, pw)
-    api.login()
+    The previous version returned 0 on missing credentials, so the daily job
+    reported success for eight weeks while the dashboard served stale data.
+    Never again: if this script cannot produce fresh data, it fails.
+    """
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::error::{msg}")
+    print(f"ERROR: {msg}", file=sys.stderr)
+    raise SystemExit(1)
 
-    today = datetime.date.today().isoformat()
 
-    def safe(fn, *a, default=None):
-        try:
-            return fn(*a)
-        except Exception as e:  # noqa
-            print(f"warn: {fn.__name__} failed: {e}", file=sys.stderr)
-            return default
+def restore_token():
+    blob = os.environ.get("GARMINTOKENS_BASE64")
+    if not blob:
+        fail(
+            "GARMINTOKENS_BASE64 is not set. Run scripts/mint_garmin_tokens.py "
+            "locally, then: gh secret set GARMINTOKENS_BASE64 --repo nfphotos/nf-dashboard"
+        )
+    TOKENSTORE.mkdir(mode=0o700, parents=True, exist_ok=True)
+    token_file = TOKENSTORE / "garmin_tokens.json"
+    try:
+        token_file.write_bytes(base64.b64decode(blob))
+    except Exception as e:
+        fail(f"GARMINTOKENS_BASE64 is not valid base64: {e}")
+    token_file.chmod(0o600)
+    return token_file
 
+
+def connect():
+    from garminconnect import (
+        Garmin,
+        GarminConnectAuthenticationError,
+        GarminConnectConnectionError,
+        GarminConnectTooManyRequestsError,
+    )
+
+    # No credentials, on purpose — see the module docstring.
+    api = Garmin()
+    try:
+        api.login(str(TOKENSTORE))
+    except GarminConnectTooManyRequestsError:
+        fail(
+            "Garmin returned 429 (rate limited). Do NOT re-run this repeatedly — "
+            "that is how accounts get locked for 48-72 hours. Wait a day."
+        )
+    except (GarminConnectAuthenticationError, GarminConnectConnectionError) as e:
+        fail(
+            f"Garmin rejected the stored token ({e}). Re-run "
+            "scripts/mint_garmin_tokens.py locally and update GARMINTOKENS_BASE64."
+        )
+    return api
+
+
+def safe(fn, *args, default=None):
+    """Individual metrics are allowed to be missing; auth is not."""
+    try:
+        return fn(*args)
+    except Exception as e:
+        print(f"warn: {getattr(fn, '__name__', fn)} failed: {e}", file=sys.stderr)
+        return default
+
+
+def first(seq):
+    return seq[0] if isinstance(seq, list) and seq else None
+
+
+def build_daily(api, today):
     stats = safe(api.get_stats, today, default={}) or {}
     bb = safe(api.get_body_battery, today, today, default=[]) or []
     sleep = safe(api.get_sleep_data, today, default={}) or {}
     hrv = safe(api.get_hrv_data, today, default={}) or {}
+    max_metrics = safe(api.get_max_metrics, today, default=[]) or []
+    training_status = safe(api.get_training_status, today, default={}) or {}
 
-    # Body Battery high/low for the day
+    # Training Readiness is a premium-watch feature; the Instinct line generally
+    # does not report it. Absence here is normal, not an error.
+    readiness_raw = safe(api.get_training_readiness, today, default=[]) or []
+    readiness_rec = first(readiness_raw) if isinstance(readiness_raw, list) else readiness_raw
+    readiness = (readiness_rec or {}).get("score") if isinstance(readiness_rec, dict) else None
+
     bb_high = bb_low = None
-    if bb and isinstance(bb, list) and bb[0].get("bodyBatteryValuesArray"):
-        vals = [v[1] for v in bb[0]["bodyBatteryValuesArray"] if v[1] is not None]
+    bb_rec = first(bb)
+    if isinstance(bb_rec, dict) and bb_rec.get("bodyBatteryValuesArray"):
+        vals = [v[1] for v in bb_rec["bodyBatteryValuesArray"] if v and v[1] is not None]
         if vals:
             bb_high, bb_low = max(vals), min(vals)
 
+    # On an Instinct, Body Battery peak is the honest stand-in for readiness.
+    readiness_source = "garmin"
+    if readiness is None and bb_high is not None:
+        readiness, readiness_source = bb_high, "bodyBattery"
+
     sleep_secs = (sleep.get("dailySleepDTO") or {}).get("sleepTimeSeconds")
-    sleep_hours = round(sleep_secs / 3600, 1) if sleep_secs else None
-    hrv_avg = (hrv.get("hrvSummary") or {}).get("lastNightAvg")
+    hrv_avg = (hrv.get("hrvSummary") or {}).get("lastNightAvg") if isinstance(hrv, dict) else None
 
-    # Simple readiness proxy: prefer Garmin's if present, else Body Battery high.
-    readiness = (stats.get("trainingReadiness") or {}).get("score") if isinstance(
-        stats.get("trainingReadiness"), dict) else None
-    if readiness is None:
-        readiness = bb_high
+    vo2 = None
+    mm = first(max_metrics)
+    if isinstance(mm, dict):
+        generic = mm.get("generic") or {}
+        vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
 
-    daily = {
+    load = None
+    if isinstance(training_status, dict):
+        summary = training_status.get("mostRecentTrainingLoadBalance") or {}
+        for metrics in (summary.get("metricsTrainingLoadBalanceDTOMap") or {}).values():
+            if isinstance(metrics, dict) and metrics.get("monthlyLoadAerobicLow") is not None:
+                load = sum(
+                    v for k, v in metrics.items()
+                    if k.startswith("monthlyLoad") and isinstance(v, (int, float))
+                )
+                break
+
+    return {
         "date": today,
         "readiness": readiness,
+        "readinessSource": readiness_source,
         "bodyBatteryHigh": bb_high,
         "bodyBatteryLow": bb_low,
-        "sleepHours": sleep_hours,
+        "sleepHours": round(sleep_secs / 3600, 1) if sleep_secs else None,
         "steps": stats.get("totalSteps"),
         "hrv": hrv_avg,
         "restingHR": stats.get("restingHeartRate"),
         "stress": stats.get("averageStressLevel"),
-        "vo2max": stats.get("vo2MaxValue") or stats.get("vO2MaxValue"),
-        "trainingLoad": (stats.get("trainingLoad") or {}).get("acuteLoad")
-            if isinstance(stats.get("trainingLoad"), dict) else stats.get("trainingLoad"),
+        "vo2max": round(vo2, 1) if isinstance(vo2, (int, float)) else None,
+        "trainingLoad": round(load) if isinstance(load, (int, float)) else None,
     }
 
-    activities = []
-    for a in (safe(api.get_activities, 0, 5, default=[]) or []):
+
+def build_activities(api):
+    out = []
+    for a in (safe(api.get_activities, 0, 6, default=[]) or []):
         dur = a.get("duration") or 0
         dist = a.get("distance") or 0
-        activities.append({
-            "name": a.get("activityName") or a.get("activityType", {}).get("typeKey", "Activity"),
-            "distance": f"{dist/1000:.1f} km" if dist else "",
-            "duration": f"{int(dur//60)}:{int(dur%60):02d}" if dur else "",
+        out.append({
+            "name": a.get("activityName")
+                    or (a.get("activityType") or {}).get("typeKey", "Activity"),
+            "distance": f"{dist / 1000:.1f} km" if dist else "",
+            "duration": f"{int(dur // 60)}:{int(dur % 60):02d}" if dur else "",
+            "date": (a.get("startTimeLocal") or "")[:10],
         })
+    return out
 
-    (DATA / "garmin.json").write_text(json.dumps(
-        {"daily": daily, "activities": activities}, indent=2))
-    (DATA / "meta.json").write_text(json.dumps(
-        {"lastSync": datetime.datetime.utcnow().isoformat() + "Z"}, indent=2))
-    print("garmin.json updated:", {k: v for k, v in daily.items() if v is not None})
+
+def persist_rotated_token(token_file, original_b64):
+    """Garmin rotates the refresh token. If we drop the new one, the stored
+    secret goes stale and the sync eventually dies. Hand the rotated value to
+    the workflow so it can update the secret."""
+    rotated = base64.b64encode(token_file.read_bytes()).decode()
+    if rotated == original_b64:
+        return
+    print("note: Garmin rotated the refresh token")
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:
+        pathlib.Path("/tmp/garmin_tokens.b64").write_text(rotated)
+        with open(out, "a") as fh:
+            fh.write("rotated=true\n")
+
+
+def main():
+    original_b64 = os.environ.get("GARMINTOKENS_BASE64", "")
+    token_file = restore_token()
+    api = connect()
+
+    today = datetime.date.today().isoformat()
+    daily = build_daily(api, today)
+
+    # A payload where every metric is None means the fetch failed even though
+    # auth worked — writing it would replace good data with an empty day.
+    metrics = {k: v for k, v in daily.items()
+               if k not in ("date", "readinessSource") and v is not None}
+    if not metrics:
+        fail("Authenticated, but Garmin returned no metrics at all for today.")
+
+    payload = {"daily": daily, "activities": build_activities(api)}
+    (DATA / "garmin.json").write_text(json.dumps(payload, indent=2) + "\n")
+
+    meta = {}
+    try:
+        meta = json.loads((DATA / "meta.json").read_text())
+    except Exception:
+        pass
+    meta["lastSync"] = datetime.datetime.now(datetime.timezone.utc).isoformat(
+        timespec="seconds").replace("+00:00", "Z")
+    meta["garminDate"] = today
+    (DATA / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+
+    persist_rotated_token(token_file, original_b64)
+
+    print(f"garmin.json updated for {today}: {metrics}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

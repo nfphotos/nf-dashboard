@@ -1,12 +1,16 @@
 // Simple offline cache. Bump VERSION to force refresh of the shell.
-const VERSION = "nf-v3";
+const VERSION = "nf-v4";
 const SHELL = [
   ".", "index.html",
   "assets/css/styles.css",
   "assets/js/app.js",
   "assets/js/config.js",
   "manifest.webmanifest",
-  "assets/icons/icon.svg"
+  "assets/icons/icon.svg",
+  "assets/icons/icon-192.png",
+  "assets/icons/icon-512.png",
+  "assets/icons/apple-touch-icon.png",
+  "assets/icons/favicon-32.png"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

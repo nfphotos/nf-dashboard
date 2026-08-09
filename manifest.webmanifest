@@ -1,14 +1,20 @@
 {
   "name": "NF Command Centre",
   "short_name": "NF Centre",
-  "description": "Personal dashboard — fitness, photography, social & money.",
+  "description": "Personal command centre — training, fixtures, content and kit.",
+  "id": "/nf-dashboard/",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
-  "background_color": "#0c0f0a",
-  "theme_color": "#0c0f0a",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
   "orientation": "portrait",
+  "categories": ["productivity", "health", "lifestyle"],
   "icons": [
-    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

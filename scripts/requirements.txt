@@ -1,3 +1,7 @@
-garminconnect>=0.2.19
+# Pinned: garminconnect auth internals changed materially across 0.3.x
+# (0.3.0 replaced the deprecated `garth` with a native engine). Do not float.
+garminconnect==0.3.9
+curl_cffi>=0.15.0
+
 google-api-python-client>=2.120.0
 google-auth>=2.29.0
