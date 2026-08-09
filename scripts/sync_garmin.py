@@ -232,9 +232,9 @@ def build_history(api, today):
 
     # Stress rides on a per-day endpoint, so it's merged + backfilled here
     # rather than fetched wholesale.
-    filled = add_stress(api, days, load_existing_history())
-    if filled:
-        print(f"stress: topped up {filled} day(s)")
+    got, remaining = add_stress(api, days, load_existing_history())
+    if got or remaining:
+        print(f"stress: filled {got} day(s), {remaining} still missing")
 
     return [days[k] for k in sorted(days)]
 
@@ -272,10 +272,12 @@ def add_stress(api, days, existing):
     if not missing:
         return 0
 
+    filled = 0
     for date in missing[:MAX_STRESS_BACKFILL]:
         s = safe(api.get_stats, date, default={}) or {}
         if s.get("averageStressLevel") is None:
             continue
+        filled += 1
         secs = lambda k: round((s.get(k) or 0) / 60)
         days[date].update({
             "stressAvg": s.get("averageStressLevel"),
@@ -289,7 +291,9 @@ def add_stress(api, days, existing):
             "intensityVigorous": s.get("vigorousIntensityMinutes"),
             "intensityGoal": s.get("intensityMinutesGoal"),
         })
-    return min(len(missing), MAX_STRESS_BACKFILL)
+    # Report what actually landed, not what was attempted — the difference
+    # once sent me hunting a backfill bug that didn't exist.
+    return filled, len(missing) - filled
 
 
 def build_activities(api):
