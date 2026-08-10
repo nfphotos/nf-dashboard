@@ -5,3 +5,4 @@ curl_cffi>=0.15.0
 
 google-api-python-client>=2.120.0
 google-auth>=2.29.0
+cryptography>=42.0.0

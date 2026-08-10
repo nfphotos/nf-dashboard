@@ -434,6 +434,116 @@ function renderCheckin(history, calendar) {
   };
 }
 
+/* ---------- Diary: the whole calendar, decrypted in the browser -------
+   This site is public — GitHub Pages serves publicly even from a private
+   repo — so the full event list is committed encrypted (AES-256-GCM, key
+   from PBKDF2 over a passphrase) and only ever decrypted here. Fixtures
+   stay in the clear because they're published football matches; scouts,
+   band and family are nobody else's business.
+--------------------------------------------------------------------- */
+const DIARY_PASS_KEY = "nf.diaryPass";
+const KIND_LABEL = { fixture: "Fixture", band: "Band", scouts: "Scouts", other: "Other" };
+let diaryEvents = null, diaryFilter = "all";
+
+const b64bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function decryptDiary(blob, passphrase) {
+  const material = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: b64bytes(blob.salt), iterations: blob.iterations, hash: "SHA-256" },
+    material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: b64bytes(blob.nonce) }, key, b64bytes(blob.ciphertext));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+function renderDiary(calendar) {
+  const lock = $("#diary-lock"), card = $("#diary-card");
+  if (!lock || !card) return;
+  const blob = calendar && calendar.diary;
+
+  if (!blob) {
+    lock.querySelector(".diary-intro").textContent =
+      "No encrypted diary published yet — the sync needs a CALENDAR_PASSPHRASE secret.";
+    $("#diary-form").hidden = true;
+    return;
+  }
+
+  const unlock = async (passphrase, remember) => {
+    try {
+      diaryEvents = await decryptDiary(blob, passphrase);
+      if (remember) localStorage.setItem(DIARY_PASS_KEY, passphrase);
+      lock.hidden = true; card.hidden = false;
+      paintDiary();
+      return true;
+    } catch {
+      // AES-GCM fails closed on a wrong key — no need to check it ourselves.
+      localStorage.removeItem(DIARY_PASS_KEY);
+      return false;
+    }
+  };
+
+  const saved = localStorage.getItem(DIARY_PASS_KEY);
+  if (saved) unlock(saved, false);
+
+  $("#diary-form").onsubmit = async e => {
+    e.preventDefault();
+    const ok = await unlock($("#diary-pass").value, true);
+    $("#diary-error").textContent = ok ? "" : "That passphrase didn't work.";
+    if (ok) $("#diary-pass").value = "";
+  };
+
+  $("#diary-lock-btn").onclick = () => {
+    localStorage.removeItem(DIARY_PASS_KEY);
+    diaryEvents = null;
+    card.hidden = true; lock.hidden = false;
+  };
+}
+
+function paintDiary() {
+  if (!diaryEvents) return;
+  const todayStr = todayISO();
+  const upcoming = diaryEvents.filter(e => (e.start || "").slice(0, 10) >= todayStr);
+
+  const counts = upcoming.reduce((m, e) => ({ ...m, [e.kind]: (m[e.kind] || 0) + 1 }), {});
+  const kinds = ["all", ...Object.keys(KIND_LABEL).filter(k => counts[k])];
+  $("#diary-filters").innerHTML = kinds.map(k =>
+    `<button class="diary-chip ${k === diaryFilter ? "on" : ""}" data-kind="${k}">
+       ${k === "all" ? "Everything" : KIND_LABEL[k]}
+       <small>${k === "all" ? upcoming.length : counts[k]}</small>
+     </button>`).join("");
+  $("#diary-filters").querySelectorAll(".diary-chip").forEach(b =>
+    b.addEventListener("click", () => { diaryFilter = b.dataset.kind; paintDiary(); }));
+
+  const shown = upcoming.filter(e => diaryFilter === "all" || e.kind === diaryFilter);
+  $("#diary-count").textContent = `${shown.length} upcoming`;
+
+  // Agenda: grouped under date headings, newest first.
+  const byDay = {};
+  shown.forEach(e => (byDay[e.start.slice(0, 10)] = byDay[e.start.slice(0, 10)] || []).push(e));
+
+  const time = e => e.allDay ? "all day"
+    : new Date(e.start).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  $("#diary-list").innerHTML = Object.keys(byDay).sort().map(day => {
+    const d = new Date(day + "T00:00:00Z");
+    const heading = d.toLocaleDateString("en-GB",
+      { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+    const isToday = day === todayStr;
+    return `<div class="diary-day">
+      <div class="diary-date ${isToday ? "today" : ""}">${heading}${isToday ? " · today" : ""}</div>
+      ${byDay[day].map(e => `
+        <div class="diary-ev k-${e.kind}">
+          <span class="diary-time">${time(e)}</span>
+          <span class="diary-title">${esc(e.title)}${e.location
+            ? `<small>${esc(e.location.split(",")[0])}</small>` : ""}</span>
+          <span class="diary-kind">${KIND_LABEL[e.kind] || ""}</span>
+        </div>`).join("")}
+    </div>`;
+  }).join("") || '<p class="muted">Nothing upcoming.</p>';
+}
+
 /* ---------- NF Photography Tools (Mac app only) ----------------------
    These shell out to local Python over folders of RAWs and 4K clips, so
    they only exist where the files and the interpreter do. On the phone
@@ -1507,6 +1617,7 @@ async function boot() {
   renderRegularity(g?.history);
   renderCheckin(g?.history, cal);
   renderTools();
+  renderDiary(cal);
   renderTonight(g?.history, cal);
   renderWeekday(g?.history);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data

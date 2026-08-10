@@ -22,6 +22,9 @@ jobs:
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           CALENDAR_IDS: ${{ vars.CALENDAR_IDS }}   # optional repo variable; falls back to primary
+          # Encrypts the full diary. Without it, only fixtures are published —
+          # the personal schedule is never written in the clear.
+          CALENDAR_PASSPHRASE: ${{ secrets.CALENDAR_PASSPHRASE }}
         run: python scripts/sync_calendar.py
 
       # Rebase-and-retry: the Calendar and Garmin syncs both commit to main and

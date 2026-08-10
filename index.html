@@ -43,6 +43,7 @@
     <button class="tab" data-target="sec-work">Work</button>
     <button class="tab" data-target="sec-progress">Progress</button>
     <button class="tab" data-target="sec-tasks">Tasks</button>
+    <button class="tab" data-target="sec-diary">Diary</button>
     <button class="tab" data-target="sec-gear">Gear</button>
   </nav>
 
@@ -315,6 +316,30 @@
         </form>
         <ul class="list checks" id="t-list"></ul>
         <small class="muted">Saved on this device.</small>
+      </article>
+    </section>
+
+    <!-- ===== DIARY (everything on the calendar, encrypted at rest) ===== -->
+    <section id="sec-diary" class="panel-group">
+      <article class="card" id="diary-lock">
+        <h3>Diary <span class="pill">locked</span></h3>
+        <p class="muted diary-intro">
+          Your full calendar — fixtures, band, scouts, everything. It's encrypted
+          in the repo because this site is public, so it needs your passphrase
+          once on each device.
+        </p>
+        <form class="quick-add" id="diary-form">
+          <input id="diary-pass" type="password" placeholder="Passphrase" autocomplete="current-password" />
+          <button type="submit">Unlock</button>
+        </form>
+        <small class="muted" id="diary-error"></small>
+      </article>
+
+      <article class="card" id="diary-card" hidden>
+        <h3>What's coming up <span class="pill" id="diary-count">—</span></h3>
+        <div class="diary-filters" id="diary-filters"></div>
+        <div id="diary-list"></div>
+        <button class="mini-btn" id="diary-lock-btn">lock again</button>
       </article>
     </section>
 
