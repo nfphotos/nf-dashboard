@@ -940,6 +940,168 @@ function renderWeekday(history) {
   card.hidden = false;
 }
 
+/* ---------- Ask your data --------------------------------------------
+   Hypothesis-first, deliberately. Turn a dashboard loose on thirty metrics
+   and it will always find "something" — that is how you end up publishing
+   "brunch boosts mood 128%". So: a fixed, short list of questions he
+   actually cares about, each tested on its own, with "no signal" as a
+   perfectly good answer.
+
+   Significance uses a BLOCK permutation test rather than a t-test. Daily
+   health series are strongly autocorrelated, and ignoring that inflates
+   false positives roughly sixfold at these sample sizes. Shuffling
+   contiguous week-long blocks preserves the autocorrelation under the
+   null, so the p-value means something.
+--------------------------------------------------------------------- */
+const MIN_PER_GROUP = 8;        // below this, don't dignify it with a verdict
+const PERM_ITERS = 3000;
+const BLOCK = 7;
+
+function meanOf(a) { return a.reduce((s, x) => s + x, 0) / a.length; }
+
+/** Shuffle labels in contiguous blocks so day-to-day dependence survives. */
+function blockPermutationP(values, flags, observed) {
+  const n = values.length;
+  const blocks = [];
+  for (let i = 0; i < n; i += BLOCK) blocks.push(flags.slice(i, i + BLOCK));
+
+  let extreme = 0;
+  for (let iter = 0; iter < PERM_ITERS; iter++) {
+    const shuffled = blocks.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const flat = shuffled.flat().slice(0, n);
+    const a = [], b = [];
+    for (let i = 0; i < n; i++) (flat[i] ? a : b).push(values[i]);
+    if (a.length < 2 || b.length < 2) continue;
+    if (Math.abs(meanOf(a) - meanOf(b)) >= Math.abs(observed)) extreme++;
+  }
+  return (extreme + 1) / (PERM_ITERS + 1);
+}
+
+const nextISO = iso => nextDay(iso);
+
+const QUESTIONS = [
+  {
+    id: "matchday-sleep", q: "Do matchdays cost me sleep?",
+    metric: "sleepHours", unit: "h", dp: 1,
+    groupLabel: ["on shoot nights", "otherwise"],
+    flag: (h, ctx) => ctx.fixtureDays.has(h.date),
+  },
+  {
+    id: "dayafter-recovery", q: "Does the day after a shoot hit my recovery?",
+    metric: "bodyBatteryPeak", unit: "", dp: 0,
+    groupLabel: ["the day after a shoot", "other days"],
+    flag: (h, ctx) => ctx.afterDays.has(h.date) && !ctx.fixtureDays.has(h.date),
+  },
+  {
+    id: "late-bed", q: "Does a late bedtime hurt my next day?",
+    metric: "bodyBatteryPeak", unit: "", dp: 0, shiftNext: true,
+    groupLabel: ["after a late night", "after an early one"],
+    flag: (h, ctx) => h.bedMin != null && ctx.lateBed != null &&
+      ((h.bedMin - 18 * 60 + 1440) % 1440) > ctx.lateBed,
+  },
+  {
+    id: "short-sleep-hr", q: "Does a short night show up in my resting HR?",
+    metric: "restingHR", unit: " bpm", dp: 0,
+    groupLabel: ["after under 7h", "after 7h or more"],
+    flag: h => h.sleepHours != null && h.sleepHours < 7,
+  },
+  {
+    id: "matchday-steps", q: "Do I actually move more on shoot days?",
+    metric: "steps", unit: "", dp: 0,
+    groupLabel: ["on shoot days", "otherwise"],
+    flag: (h, ctx) => ctx.fixtureDays.has(h.date),
+  },
+];
+
+function answerQuestion(spec, history, calendar) {
+  const fixtureDays = new Set([...(calendar?.past || []), ...(calendar?.matches || [])]
+    .map(m => (m.start || "").slice(0, 10)).filter(Boolean));
+  const afterDays = new Set([...fixtureDays].map(nextISO));
+
+  const beds = history.filter(h => h.bedMin != null)
+    .map(h => (h.bedMin - 18 * 60 + 1440) % 1440).sort((a, b) => a - b);
+  const lateBed = beds.length ? beds[Math.floor(beds.length / 2)] : null;
+  const ctx = { fixtureDays, afterDays, lateBed };
+
+  // For "does X predict tomorrow", the flag comes from day N and the value
+  // from day N+1.
+  const byDate = Object.fromEntries(history.map(h => [h.date, h]));
+  const rows = [];
+  for (const h of history) {
+    const source = spec.shiftNext ? h : h;
+    const target = spec.shiftNext ? byDate[nextISO(h.date)] : h;
+    if (!target) continue;
+    const v = target[spec.metric];
+    if (v == null) continue;
+    const f = spec.flag(source, ctx);
+    if (f === null || f === undefined) continue;
+    rows.push({ date: h.date, v, f: !!f });
+  }
+
+  const a = rows.filter(r => r.f).map(r => r.v);
+  const b = rows.filter(r => !r.f).map(r => r.v);
+  if (a.length < MIN_PER_GROUP || b.length < MIN_PER_GROUP) {
+    return { tooFew: true, nA: a.length, nB: b.length };
+  }
+
+  const diff = meanOf(a) - meanOf(b);
+  const p = blockPermutationP(rows.map(r => r.v), rows.map(r => r.f), diff);
+  return { diff, p, mA: meanOf(a), mB: meanOf(b), nA: a.length, nB: b.length };
+}
+
+function renderAsk(history, calendar) {
+  const card = $("#ask-card");
+  if (!card || !Array.isArray(history) || history.length < 25) return;
+
+  $("#ask-qs").innerHTML = QUESTIONS.map(q =>
+    `<button class="ask-q" data-id="${q.id}">${esc(q.q)}</button>`).join("");
+
+  $("#ask-qs").querySelectorAll(".ask-q").forEach(btn =>
+    btn.addEventListener("click", () => {
+      $("#ask-qs").querySelectorAll(".ask-q").forEach(x => x.classList.remove("on"));
+      btn.classList.add("on");
+
+      const spec = QUESTIONS.find(q => q.id === btn.dataset.id);
+      const out = $("#ask-answer");
+      out.hidden = false;
+      out.innerHTML = `<p class="ask-working">Testing…</p>`;
+
+      // Let the button paint before the permutation loop blocks the thread.
+      setTimeout(() => {
+        const r = answerQuestion(spec, history, calendar);
+        const fmtv = v => spec.dp ? v.toFixed(spec.dp) : fmt.format(Math.round(v));
+
+        if (r.tooFew) {
+          out.innerHTML = `<p class="ask-verdict none">Not enough data yet</p>
+            <p class="ask-detail">Only ${r.nA} and ${r.nB} days to compare — I'd want at least
+            ${MIN_PER_GROUP} of each before calling anything.</p>`;
+          return;
+        }
+
+        const signal = r.p < 0.05;
+        const dir = r.diff > 0 ? "more" : "less";
+        out.innerHTML = `
+          <p class="ask-verdict ${signal ? "yes" : "none"}">
+            ${signal ? "Yes — there's a real difference" : "No signal found"}</p>
+          <p class="ask-detail">
+            ${fmtv(r.mA)}${spec.unit} ${spec.groupLabel[0]} (${r.nA} days) versus
+            ${fmtv(r.mB)}${spec.unit} ${spec.groupLabel[1]} (${r.nB} days) —
+            ${fmtv(Math.abs(r.diff))}${spec.unit} ${dir}.
+            ${signal
+              ? `That gap is bigger than chance shuffling produces (p ≈ ${r.p.toFixed(3)}).`
+              : `A gap that size turns up by chance often enough that I wouldn't read anything into it (p ≈ ${r.p.toFixed(2)}).`}
+          </p>
+          <p class="ask-caveat">Association only — this compares days, it doesn't prove one caused the other.</p>`;
+      }, 30);
+    }));
+
+  card.hidden = false;
+}
+
 /* ---------- Matchday impact ------------------------------------------
    The one thing this app can do that nothing else can: it holds both the
    fixture list and the body data. Compare shoot days, the day after, and
@@ -1008,12 +1170,17 @@ function renderMatchday(history, calendar) {
   const aHR = mean(groups[1].rows, "restingHR"), oHR = mean(groups[2].rows, "restingHR");
   const aBB = mean(groups[1].rows, "bodyBatteryPeak"), oBB = mean(groups[2].rows, "bodyBatteryPeak");
 
+  // Descriptive, not causal. An earlier version of this said "the day AFTER
+  // is where it shows" — then the Ask panel tested that exact claim with a
+  // block permutation test and found p ≈ 0.37. Two parts of the same app
+  // can't disagree about the same numbers, and the statistics win.
   if (mSleep != null && oSleep != null && mSleep >= oSleep) {
-    say.push(`Shoot days don't cost you sleep — you average ${mSleep.toFixed(1)}h on them, ${(mSleep - oSleep).toFixed(1)}h more than an ordinary day.`);
+    say.push(`Shoot days aren't your short nights — you average ${mSleep.toFixed(1)}h on them, ${(mSleep - oSleep).toFixed(1)}h more than an ordinary day.`);
   }
   if (aHR != null && oHR != null && aHR > oHR + 0.5) {
-    say.push(`The day <em>after</em> is where it shows: resting HR ${Math.round(aHR)} vs ${Math.round(oHR)}${aBB != null && oBB != null && aBB < oBB ? `, Body Battery ${Math.round(aBB)} vs ${Math.round(oBB)}` : ""}.`);
+    say.push(`The day <em>after</em> reads a little flatter: resting HR ${Math.round(aHR)} vs ${Math.round(oHR)}${aBB != null && oBB != null && aBB < oBB ? `, Body Battery ${Math.round(aBB)} vs ${Math.round(oBB)}` : ""}.`);
   }
+  say.push(`These are averages, not verdicts — <em>Ask your data</em> above tests whether any of these gaps are bigger than chance.`);
   $("#md-read").innerHTML = say.join(" ");
   card.hidden = false;
 }
@@ -1701,6 +1868,7 @@ async function boot() {
   renderDiary(cal);
   renderTonight(g?.history, cal);
   renderWeekday(g?.history);
+  renderAsk(g?.history, cal);
   renderMatchday(g?.history, cal);   // needs both feeds — fixtures AND body data
   renderBriefing();   // after readiness + fixture are populated
   if (meta?.lastSync) $("#last-sync").textContent = "Last sync: " +
