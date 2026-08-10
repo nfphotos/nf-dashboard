@@ -26,7 +26,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      # Explicitly the tip of main, not the default ref. When a sync workflow
+      # calls this, the default is the SHA that TRIGGERED that run — i.e. the
+      # state before the bot committed its fresh data — so the deploy would
+      # succeed while shipping the previous version. Bit us with the diary.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
