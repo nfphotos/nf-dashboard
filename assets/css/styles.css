@@ -490,3 +490,30 @@ table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
 .diary-title{ flex:1; font-size:13.5px; line-height:1.35; }
 .diary-title small{ display:block; color:var(--muted); font-size:11px; }
 .diary-kind{ color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+
+/* ---------- Trend range + day detail ------------------------------- */
+.trend-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0 10px; }
+.range{ display:flex; gap:5px; }
+.range-btn{
+  padding:6px 13px; border-radius:999px; cursor:pointer; font:inherit; font-size:12px;
+  background:var(--card-2); border:1px solid var(--line); color:var(--ink-dim);
+}
+.range-btn.on{ background:var(--accent-soft); border-color:var(--accent); color:var(--ink); font-weight:600; }
+.trend-bar small{ font-size:11px; }
+
+.ch-hit.sel{ fill:var(--accent); opacity:.16; }
+
+.day-detail{ margin-bottom:12px; border-color:var(--accent-soft); }
+.dd-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.dd-head strong{ font-size:14px; }
+.dd-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.dd-cell{ background:var(--card-2); border-radius:9px; padding:8px 9px; }
+.dd-cell small{ display:block; color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.04em; margin-bottom:2px; }
+.dd-cell span{ font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+.dd-sec{ margin-top:10px; }
+.dd-sec small{ display:block; color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.04em; margin-bottom:3px; }
+.dd-line{ display:flex; justify-content:space-between; gap:10px; font-size:13px;
+  padding:3px 0; color:var(--ink); }
+.dd-line span{ color:var(--ink-dim); font-variant-numeric:tabular-nums; }

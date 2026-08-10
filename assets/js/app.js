@@ -60,6 +60,7 @@ function renderGarmin(g) {
   set("f-stress", d.stress);
 
   renderTrends(g.history);
+  renderDayDetail();
 
   // Readiness ring + advice.
   // Stale data is worse than no data: an old number silently reads as today's.
@@ -135,8 +136,12 @@ function chartFrame(rows, { value, goal, fmtValue, label, labelKey }) {
   const hover = rows.map((r, i) => {
     const v = value(r);
     if (v == null) return "";
-    return `<rect class="ch-hit" x="${i * (w / rows.length)}" y="0" width="${w / rows.length}" height="${h}"
-      data-label="${esc(rowLabel(r))}" data-value="${esc(fmtValue(v))}"></rect>`;
+    // data-date carries the ISO day so a tap can open that whole day, and so
+    // the selection can be mirrored across every chart.
+    const iso = labelKey ? "" : (r.date || "");
+    const sel = iso && iso === selectedDay ? " sel" : "";
+    return `<rect class="ch-hit${sel}" x="${i * (w / rows.length)}" y="0" width="${w / rows.length}" height="${h}"
+      data-date="${esc(iso)}" data-label="${esc(rowLabel(r))}" data-value="${esc(fmtValue(v))}"></rect>`;
   }).join("");
 
   // Put the goal label on whichever end has the shorter marks, so it can't
@@ -200,6 +205,14 @@ function svgWrap(f, inner) {
 function attachTooltip(el) {
   const tip = el.querySelector(".ch-tip");
   el.querySelectorAll(".ch-hit").forEach(hit => {
+    // Tap a day to open it in full. Tap the same day again to close.
+    if (hit.dataset.date) {
+      hit.addEventListener("click", () => {
+        selectedDay = selectedDay === hit.dataset.date ? null : hit.dataset.date;
+        renderTrends(window._history);
+        renderDayDetail();
+      });
+    }
     const show = e => {
       tip.textContent = `${hit.dataset.label} · ${hit.dataset.value}`;
       tip.hidden = false;
@@ -649,7 +662,7 @@ function renderStress(history) {
   const rolled = all.map((h, i) => {
     const w = all.slice(Math.max(0, i - 6), i + 1);
     return { date: h.date, avg: w.reduce((s, x) => s + x.stressAvg, 0) / w.length };
-  }).slice(-TREND_DAYS);
+  }).slice(-trendDays);
 
   const baseline = all.reduce((s, h) => s + h.stressAvg, 0) / all.length;
   const recent = rolled[rolled.length - 1].avg;
@@ -666,7 +679,7 @@ function renderStress(history) {
 
   // Hours at rest is the better-behaved half of this data — it's a duration,
   // not a proprietary score — so it stays, framed as recovery time.
-  barChart($("#ch-rest"), all.slice(-TREND_DAYS), {
+  barChart($("#ch-rest"), all.slice(-trendDays), {
     value: h => h.restMin != null ? h.restMin / 60 : null,
     fmtValue: v => `${v.toFixed(1)}h`,
   });
@@ -1253,15 +1266,91 @@ function renderSessions() {
   $("#gcal-next").onclick = () => { gcalMonth.setMonth(gcalMonth.getMonth() + 1); renderGymCalendar(); };
 }
 
+/* ---------- Interactive trends ---------------------------------------
+   Tap any day in any chart to open that whole day, and to mark the same
+   day in every other chart. The panel asserts nothing — it just puts the
+   day's facts in one place: the metrics, what was on the calendar, what
+   was trained, and whatever he wrote. "Why was that day bad?" answered by
+   showing the day, not by inventing a cause.
+--------------------------------------------------------------------- */
+const TREND_RANGES = [7, 30, 90];
+let trendDays = 30;
+let selectedDay = null;
+
+// Kept for the modules that still reference a fixed window.
 const TREND_DAYS = 30;
+
+function renderDayDetail() {
+  const panel = $("#day-detail");
+  if (!panel) return;
+  const history = window._history || [];
+  const day = selectedDay && history.find(h => h.date === selectedDay);
+
+  if (!day) { panel.hidden = true; panel.innerHTML = ""; return; }
+
+  const cal = window._calendar || {};
+  const events = [...(cal.matches || []), ...(cal.past || [])]
+    .filter(m => (m.start || "").slice(0, 10) === selectedDay);
+  const lifts = loadGym().filter(e => e.date === selectedDay);
+  const check = (loadCheckins() || {})[selectedDay];
+
+  const rows = [];
+  const add = (label, value) => value != null && value !== "" && rows.push([label, value]);
+
+  add("Sleep", day.sleepHours != null ? `${day.sleepHours}h` : null);
+  if (day.bedMin != null && day.wakeMin != null) add("In bed", `${clock(day.bedMin)} → ${clock(day.wakeMin)}`);
+  add("Steps", day.steps != null ? fmt.format(day.steps) : null);
+  add("Resting HR", day.restingHR != null ? `${day.restingHR} bpm` : null);
+  add("Body Battery", day.bodyBatteryPeak != null ? `peak ${day.bodyBatteryPeak}` : null);
+  add("Settled", day.restMin != null ? `${(day.restMin / 60).toFixed(1)}h` : null);
+
+  const d = new Date(selectedDay + "T00:00:00Z");
+  panel.innerHTML = `
+    <div class="dd-head">
+      <strong>${d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}</strong>
+      <button class="mini-btn" id="dd-close">close</button>
+    </div>
+    <div class="dd-grid">
+      ${rows.map(([k, v]) => `<div class="dd-cell"><small>${k}</small><span>${esc(v)}</span></div>`).join("")}
+    </div>
+    ${events.length ? `<div class="dd-sec"><small>On the calendar</small>${
+      events.map(e => `<div class="dd-line">${esc(e.title.trim())}</div>`).join("")}</div>` : ""}
+    ${lifts.length ? `<div class="dd-sec"><small>Trained</small>${
+      lifts.map(e => `<div class="dd-line">${esc(e.name)} <span>${setsLine(e)}</span></div>`).join("")}</div>` : ""}
+    ${check ? `<div class="dd-sec"><small>You said</small><div class="dd-line">${
+      [check.energy && `Energy: ${SCALES.energy[check.energy - 1]}`,
+       check.body && `Body: ${SCALES.body[check.body - 1]}`].filter(Boolean).join(" · ")
+      }${check.note ? ` — “${esc(check.note)}”` : ""}</div></div>` : ""}`;
+
+  panel.hidden = false;
+  $("#dd-close").onclick = () => {
+    selectedDay = null;
+    renderTrends(window._history);
+    renderDayDetail();
+  };
+}
 
 function renderTrends(fullHistory) {
   if (!Array.isArray(fullHistory) || !fullHistory.length) return;
 
-  // History is 90 days (the matchday comparison needs the depth), but these
-  // charts are labelled "30d" and 90 bars in a 320-unit viewBox is a smear.
-  // Slice here rather than shortening the underlying data.
-  const history = fullHistory.slice(-TREND_DAYS);
+  // History is 90 days (the matchday comparison needs the depth); the charts
+  // show the selected window. 90 bars in a 320-unit viewBox is a smear, so
+  // slice here rather than shortening the underlying data.
+  window._history = fullHistory;
+  const history = fullHistory.slice(-trendDays);
+
+  // Range toggle, rendered once and kept in step with the current window.
+  const rangeEl = $("#trend-range");
+  if (rangeEl) {
+    rangeEl.innerHTML = TREND_RANGES.map(n =>
+      `<button class="range-btn ${n === trendDays ? "on" : ""}" data-days="${n}">${n}d</button>`).join("");
+    rangeEl.querySelectorAll(".range-btn").forEach(b =>
+      b.addEventListener("click", () => {
+        trendDays = Number(b.dataset.days);
+        renderTrends(window._history);
+        renderDayDetail();
+      }));
+  }
 
   const avg = key => {
     const v = history.map(h => h[key]).filter(x => x != null);
@@ -1276,10 +1365,10 @@ function renderTrends(fullHistory) {
   const stepGoal = CONFIG.goals?.dailySteps ?? history.find(h => h.stepGoal)?.stepGoal ?? null;
 
   const aSleep = avg("sleepHours"), aSteps = avg("steps"), aRhr = avg("restingHR"), aBb = avg("bodyBatteryPeak");
-  pill("f-sleep-avg", aSleep && `${aSleep.toFixed(1)}h avg · 30d`);
-  pill("f-steps-avg", aSteps && `${fmt.format(Math.round(aSteps))} avg · 30d`);
-  pill("f-rhr-avg", aRhr && `${Math.round(aRhr)} bpm avg · 30d`);
-  pill("f-bb-avg", aBb && `${Math.round(aBb)} avg · 30d`);
+  pill("f-sleep-avg", aSleep && `${aSleep.toFixed(1)}h avg · ${trendDays}d`);
+  pill("f-steps-avg", aSteps && `${fmt.format(Math.round(aSteps))} avg · ${trendDays}d`);
+  pill("f-rhr-avg", aRhr && `${Math.round(aRhr)} bpm avg · ${trendDays}d`);
+  pill("f-bb-avg", aBb && `${Math.round(aBb)} avg · ${trendDays}d`);
 
   barChart($("#ch-sleep"), history, {
     value: h => h.sleepHours, goal: sleepGoal,
@@ -1600,6 +1689,7 @@ async function boot() {
     loadJSON("data/gear.json", null),
     loadJSON("data/meta.json", null),
   ]);
+  window._calendar = cal;
   renderGarmin(g); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
   renderSessions();
