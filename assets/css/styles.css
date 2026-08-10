@@ -123,8 +123,6 @@ main{padding:14px 12px 30px}
 .workout{font-size:.9rem;line-height:1.65;white-space:pre-line;color:var(--ink)}
 
 /* Gallery */
-.gallery{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.gallery img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
 
 /* Tasks */
 .quick-add{display:flex;gap:8px;margin-bottom:10px}

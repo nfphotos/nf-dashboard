@@ -1352,14 +1352,6 @@ function renderCalendar(c) {
   }
 }
 
-/* ---------- Photography (gallery only — fixtures come from calendar) ---------- */
-function renderPhoto(p) {
-  if (p?.gallery?.length) {
-    $("#w-gallery").innerHTML = p.gallery.map(g =>
-      `<a href="${g.link || g.src}" target="_blank" rel="noopener"><img loading="lazy" src="${g.src}" alt="${g.caption || ""}"></a>`).join("");
-  }
-}
-
 /* ---------- Tasks (local, persists on device) ---------- */
 const TKEY = "nf-tasks-v1";
 function loadTasks(){ try{ return JSON.parse(localStorage.getItem(TKEY))||[] }catch{ return [] } }
@@ -1602,14 +1594,13 @@ async function boot() {
   // Engine pieces that don't need network data
   renderStreaks(); renderProgress(); syncDoneBtn();
 
-  const [g, p, cal, gear, meta] = await Promise.all([
+  const [g, cal, gear, meta] = await Promise.all([
     loadJSON("data/garmin.json", null),
-    loadJSON("data/photography.json", null),
     loadJSON("data/calendar.json", null),
     loadJSON("data/gear.json", null),
     loadJSON("data/meta.json", null),
   ]);
-  renderGarmin(g); renderPhoto(p); renderCalendar(cal);
+  renderGarmin(g); renderCalendar(cal);
   window._gear = gear; renderGear(gear);
   renderSessions();
   renderStress(g?.history);
