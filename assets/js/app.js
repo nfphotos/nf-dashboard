@@ -259,6 +259,70 @@ function baselineFor(history, key, excludeDate) {
   return { median: quantile(vals, 0.5), lo: quantile(vals, 0.25), hi: quantile(vals, 0.75), n: vals.length };
 }
 
+/* ---------- Weekly review --------------------------------------------
+   Last 7 days against the 21 before them. Deliberately data-dense rather
+   than a friendly summary: when one wearable company replaced its weekly
+   assessment with something warmer, its most engaged users called the
+   replacement "a letter with pictures" and asked for the numbers back.
+--------------------------------------------------------------------- */
+const WEEKLY_METRICS = [
+  { key: "sleepHours",      label: "Sleep",        fmt: v => `${v.toFixed(1)}h`,            better: "high" },
+  { key: "steps",           label: "Steps",        fmt: v => fmt.format(Math.round(v)),     better: "high" },
+  { key: "restingHR",       label: "Resting HR",   fmt: v => `${Math.round(v)}`,            better: "low"  },
+  { key: "bodyBatteryPeak", label: "Body Battery", fmt: v => `${Math.round(v)}`,            better: "high" },
+];
+
+function renderWeekly(history) {
+  const card = $("#weekly-card");
+  if (!card || !Array.isArray(history) || history.length < 28) return;
+
+  const last7 = history.slice(-7);
+  const prior21 = history.slice(-28, -7);
+  const avg = (rows, key) => {
+    const v = rows.map(r => r[key]).filter(x => x != null);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
+
+  const span = `${shortDate(last7[0].date)} – ${shortDate(last7[last7.length - 1].date)}`;
+  $("#wk-range").textContent = span;
+
+  const rows = WEEKLY_METRICS.map(m => {
+    const now = avg(last7, m.key), before = avg(prior21, m.key);
+    if (now == null || before == null) return "";
+    const diff = now - before;
+    // "Better" only where the metric has a direction worth colouring.
+    const good = m.better === "low" ? diff < 0 : diff > 0;
+    const flat = Math.abs(diff) < (m.key === "steps" ? 200 : m.key === "sleepHours" ? 0.15 : 0.75);
+    const sign = diff > 0 ? "+" : "−";
+    const mag = m.key === "steps" ? fmt.format(Math.round(Math.abs(diff)))
+      : m.key === "sleepHours" ? Math.abs(diff).toFixed(1) : Math.round(Math.abs(diff));
+    return `<tr>
+      <th>${m.label}</th>
+      <td>${m.fmt(now)}</td>
+      <td class="wk-prev">${m.fmt(before)}</td>
+      <td class="${flat ? "wk-flat" : good ? "wk-up" : "wk-down"}">${flat ? "—" : `${sign}${mag}`}</td>
+    </tr>`;
+  }).join("");
+
+  $("#wk-table").innerHTML =
+    `<table class="md wk"><tr><th></th><th>This week</th><th>Prior 3 wks</th><th>Δ</th></tr>${rows}</table>`;
+
+  // Activity that only exists because he logged it.
+  const weekStart = last7[0].date;
+  const sessions = new Set(loadGym().filter(e => e.date >= weekStart).map(e => e.date)).size;
+  const checkins = Object.keys(loadCheckins()).filter(d => d >= weekStart).length;
+  const fixtures = ((window._calendar?.past) || [])
+    .filter(m => (m.start || "").slice(0, 10) >= weekStart).length;
+
+  const bits = [];
+  bits.push(`${sessions} gym session${sessions === 1 ? "" : "s"} logged`);
+  if (fixtures) bits.push(`${fixtures} shoot${fixtures === 1 ? "" : "s"}`);
+  bits.push(`${checkins} of 7 days checked in`);
+  $("#wk-read").textContent = bits.join(" · ") + ".";
+
+  card.hidden = false;
+}
+
 /* ---------- "What changed" — and, most days, nothing -----------------
    A dashboard that is quiet most of the time gets believed when it does
    speak. Scores pinned at one end for weeks, and insight cards that fire
@@ -1861,6 +1925,7 @@ async function boot() {
   window._gear = gear; renderGear(gear);
   renderSessions();
   renderStress(g?.history);
+  renderWeekly(g?.history);
   renderWhatChanged(g?.history);
   renderRegularity(g?.history);
   renderCheckin(g?.history, cal);
