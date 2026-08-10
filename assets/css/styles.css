@@ -435,3 +435,33 @@ table.md.wd td{ font-variant-numeric:tabular-nums; color:var(--ink-dim); }
   color:var(--ink-dim); font-family:ui-monospace,Menlo,monospace;
   font-size:11px; line-height:1.45; white-space:pre-wrap; word-break:break-word;
 }
+
+/* ---------- Training history calendar ------------------------------ */
+.gcal-nav{ display:flex; align-items:center; justify-content:center; gap:14px; margin:6px 0 8px; }
+.gcal-nav strong{ font-size:13px; min-width:130px; text-align:center; }
+.gcal-dow{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px; }
+.gcal-dow span{ text-align:center; color:var(--muted); font-size:10px; font-weight:600; }
+.gcal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.gcal-day{
+  position:relative; aspect-ratio:1; border-radius:8px; font:inherit; font-size:12px;
+  background:var(--card-2); border:1px solid transparent; color:var(--muted);
+  display:flex; align-items:center; justify-content:center; cursor:default;
+  font-variant-numeric:tabular-nums;
+}
+.gcal-day.empty{ background:transparent; }
+.gcal-day.has{ background:var(--accent-soft); color:var(--ink); font-weight:600; cursor:pointer; }
+.gcal-day.has:hover{ border-color:var(--accent); }
+.gcal-day.today{ border-color:var(--ink-dim); }
+.gcal-day.sel{ border-color:var(--accent); background:var(--accent); color:var(--foundation-black); }
+.gcal-day i{
+  position:absolute; top:2px; right:4px; font-style:normal;
+  font-size:8px; color:var(--accent-bright); font-weight:700;
+}
+.gcal-day.sel i{ color:var(--foundation-black); }
+.gcal-detail{ margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+.gcal-detail-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.gcal-detail-head strong{ font-size:13px; }
+.gcal-detail-head span{ color:var(--ink-dim); font-size:11px; }
+.gcal-ex{ display:flex; justify-content:space-between; gap:10px; padding:5px 0;
+  border-bottom:1px solid var(--line-soft); font-size:13px; }
+.gcal-ex span:last-child{ color:var(--ink-dim); font-variant-numeric:tabular-nums; }

@@ -27,18 +27,17 @@ function setDate() {
     { weekday: "short", day: "numeric", month: "short" }).toUpperCase();
 }
 
-/* ---------- Weather + golden hour (free Open-Meteo, no key) ---------- */
+/* ---------- Weather (free Open-Meteo, no key) ----------
+   Golden hour removed 2026-08-10 — he shoots to fixture times, not light,
+   so it was decoration. Sunrise/sunset dropped from the query too. */
 async function loadWeather() {
   const { lat, lon, timezone, name } = CONFIG.location;
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
-      + `&current=temperature_2m,weather_code&daily=sunrise,sunset&timezone=${encodeURIComponent(timezone)}`;
+      + `&current=temperature_2m,weather_code&timezone=${encodeURIComponent(timezone)}`;
     const d = await (await fetch(u)).json();
     $("#wx-temp").textContent = Math.round(d.current.temperature_2m) + "°";
     $("#wx-meta").textContent = name + " · " + wxText(d.current.weather_code);
-    const sr = new Date(d.daily.sunrise[0]), ss = new Date(d.daily.sunset[0]);
-    const t = x => x.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    $("#golden-times").textContent = `${t(sr)} / ${t(ss)}`;
   } catch { $("#wx-meta").textContent = CONFIG.location.name; }
 }
 function wxText(c){const m={0:"Clear",1:"Clear",2:"Cloudy",3:"Overcast",45:"Fog",61:"Rain",63:"Rain",
@@ -971,7 +970,10 @@ function renderGym() {
     : '<p class="muted">Nothing logged today. Tap below as you go.</p>';
 
   $("#gym-today").querySelectorAll(".mini-x").forEach(b =>
-    b.addEventListener("click", () => { saveGym(loadGym().filter(x => x.at !== Number(b.dataset.at))); renderGym(); }));
+    b.addEventListener("click", () => {
+      saveGym(loadGym().filter(x => x.at !== Number(b.dataset.at)));
+      renderGym(); renderGymCalendar();
+    }));
 
   // Recent sessions, grouped by day
   const days = [...new Set(all.map(e => e.date))].filter(d => d !== todayISO()).sort().reverse().slice(0, 5);
@@ -1039,6 +1041,7 @@ function saveEntry() {
   markHabitDone("move");
   $("#gym-entry").hidden = true;
   renderGym();
+  renderGymCalendar();
 }
 
 const loadSessions = () => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)) || []; } catch { return []; } };
@@ -1057,6 +1060,70 @@ function removeSession(at) {
   renderSessions();
 }
 
+/* ---------- Training history calendar --------------------------------
+   A month grid: days you trained are marked, tap one to see exactly what
+   you did. The log is worth keeping only if it's easy to look back at.
+--------------------------------------------------------------------- */
+let gcalMonth = null;          // Date pinned to the 1st of the shown month
+
+function renderGymCalendar(selected) {
+  const grid = $("#gcal-grid"); if (!grid) return;
+  const all = loadGym();
+
+  if (!gcalMonth) { const n = new Date(); gcalMonth = new Date(n.getFullYear(), n.getMonth(), 1); }
+  const year = gcalMonth.getFullYear(), month = gcalMonth.getMonth();
+
+  $("#gcal-month").textContent =
+    gcalMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
+  // Group by local date string, matching how entries are stored.
+  const byDate = {};
+  all.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
+
+  const first = new Date(year, month, 1);
+  const lead = (first.getDay() + 6) % 7;                 // Monday-first
+  const days = new Date(year, month + 1, 0).getDate();
+  const todayStr = todayISO();
+
+  let html = "";
+  for (let i = 0; i < lead; i++) html += `<span class="gcal-day empty"></span>`;
+  for (let d = 1; d <= days; d++) {
+    const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const items = byDate[iso];
+    const cls = ["gcal-day"];
+    if (items) cls.push("has");
+    if (iso === todayStr) cls.push("today");
+    if (iso === selected) cls.push("sel");
+    html += `<button class="${cls.join(" ")}" data-date="${iso}" ${items ? "" : "tabindex=-1"}>
+      ${d}${items ? `<i>${items.length}</i>` : ""}</button>`;
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll(".gcal-day.has").forEach(b =>
+    b.addEventListener("click", () => renderGymCalendar(b.dataset.date)));
+
+  // Month summary: sessions and total volume in the visible month.
+  const inMonth = all.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`));
+  const sessions = new Set(inMonth.map(e => e.date)).size;
+  const vol = inMonth.reduce((s, e) => s + (e.kg ? e.sets * e.reps * e.kg : 0), 0);
+  $("#gcal-summary").textContent = sessions
+    ? `${sessions} session${sessions > 1 ? "s" : ""}${vol ? ` · ${fmt.format(Math.round(vol))} kg` : ""}`
+    : "no sessions";
+
+  const detail = $("#gcal-detail");
+  const items = selected && byDate[selected];
+  if (!items) { detail.hidden = true; detail.innerHTML = ""; return; }
+
+  const dayVol = items.reduce((s, e) => s + (e.kg ? e.sets * e.reps * e.kg : 0), 0);
+  detail.innerHTML =
+    `<div class="gcal-detail-head">
+       <strong>${shortDate(selected)}</strong>
+       <span>${items.length} exercise${items.length > 1 ? "s" : ""}${dayVol ? ` · ${fmt.format(Math.round(dayVol))} kg` : ""}</span>
+     </div>` +
+    items.map(e => `<div class="gcal-ex"><span>${esc(e.name)}</span><span>${setsLine(e)}</span></div>`).join("");
+  detail.hidden = false;
+}
+
 /** The exercise-level log replaced the type-only buttons; this now just
     wires the gym card up. */
 function renderSessions() {
@@ -1070,6 +1137,10 @@ function renderSessions() {
   };
   $("#gym-entry-close").onclick = () => { $("#gym-entry").hidden = true; };
   $("#gym-save").onclick = saveEntry;
+
+  renderGymCalendar();
+  $("#gcal-prev").onclick = () => { gcalMonth.setMonth(gcalMonth.getMonth() - 1); renderGymCalendar(); };
+  $("#gcal-next").onclick = () => { gcalMonth.setMonth(gcalMonth.getMonth() + 1); renderGymCalendar(); };
 }
 
 const TREND_DAYS = 30;

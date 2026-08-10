@@ -32,6 +32,11 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
 
+  // Never cache during local development. Offline support is worth nothing on
+  // localhost, and a stale shell there is indistinguishable from broken code —
+  // it repeatedly served an old app.js while the file on disk was correct.
+  if (["localhost", "127.0.0.1"].includes(url.hostname)) return;
+
   // Data must never be stale — a stale reading reads as today's.
   if (url.pathname.includes("/data/")) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));

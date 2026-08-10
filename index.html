@@ -33,10 +33,6 @@
         <span class="wx-temp" id="wx-temp">--°</span>
         <span class="wx-meta" id="wx-meta">Malta</span>
       </div>
-      <div class="golden" id="golden">
-        <small>GOLDEN HOUR</small>
-        <span id="golden-times">— / —</span>
-      </div>
     </div>
   </header>
 
@@ -228,9 +224,21 @@
           <button class="action-btn" id="gym-save">Add to workout</button>
         </div>
 
-        <ul class="list" id="session-log"></ul>
         <div class="session-grid" id="session-grid" hidden></div>
         <small class="muted">Saved on this device — the watch never sees it.</small>
+      </article>
+
+      <article class="card" id="gym-cal-card">
+        <h3>Training history <span class="pill" id="gcal-summary">—</span></h3>
+        <div class="gcal-nav">
+          <button class="mini-btn" id="gcal-prev" aria-label="Previous month">‹</button>
+          <strong id="gcal-month">—</strong>
+          <button class="mini-btn" id="gcal-next" aria-label="Next month">›</button>
+        </div>
+        <div class="gcal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+        <div class="gcal-grid" id="gcal-grid"></div>
+        <div class="gcal-detail" id="gcal-detail" hidden></div>
+        <ul class="list" id="session-log"></ul>
       </article>
 
       <article class="card">
