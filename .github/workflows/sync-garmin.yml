@@ -60,3 +60,14 @@ jobs:
           done
           echo "::error::could not push after 3 attempts"
           exit 1
+
+  # Deploy the freshly committed data. A push made with GITHUB_TOKEN does not
+  # trigger the on:push deploy, so without this the JSON lands in the repo but
+  # never reaches the site.
+  deploy:
+    needs: sync
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml

@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch: {}
+  # Callable by the sync workflows. Pushes made with the default GITHUB_TOKEN
+  # deliberately do NOT trigger other workflows, so the bot committing fresh
+  # Garmin/Calendar data would never deploy it — the site quietly served
+  # whatever a human push last shipped. The syncs now call this directly.
+  workflow_call: {}
 
 permissions:
   contents: read
