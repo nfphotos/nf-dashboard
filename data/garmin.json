@@ -1,40 +1,20 @@
 {
   "daily": {
-    "date": "2026-11-20",
-    "readiness": 22,
+    "date": "2026-11-21",
+    "readiness": 50,
     "readinessSource": "bodyBattery",
-    "bodyBatteryHigh": 22,
+    "bodyBatteryHigh": 50,
     "bodyBatteryLow": 5,
-    "sleepHours": 8.8,
-    "steps": 5179,
+    "sleepHours": 7.7,
+    "steps": 4093,
     "hrv": null,
-    "restingHR": 69,
-    "stress": 52,
+    "restingHR": 60,
+    "stress": 43,
     "vo2max": null,
     "trainingLoad": null
   },
   "activities": [],
   "history": [
-    {
-      "date": "2026-08-23",
-      "steps": 6671,
-      "stepGoal": 9000,
-      "restingHR": 51,
-      "sleepHours": 8.1,
-      "bedMin": 86,
-      "wakeMin": 575,
-      "bodyBatteryPeak": 42,
-      "stressAvg": 65,
-      "stressMax": 90,
-      "restMin": 6,
-      "lowMin": 4,
-      "medMin": 48,
-      "highMin": 18,
-      "stressQualifier": "UNKNOWN",
-      "intensityModerate": 0,
-      "intensityVigorous": 0,
-      "intensityGoal": 150
-    },
     {
       "date": "2026-08-24",
       "steps": 8129,
@@ -1797,7 +1777,7 @@
     },
     {
       "date": "2026-11-20",
-      "steps": 5179,
+      "steps": 5716,
       "stepGoal": 9000,
       "restingHR": 69,
       "sleepHours": 8.8,
@@ -1813,6 +1793,26 @@
       "stressQualifier": "UNKNOWN",
       "intensityModerate": 0,
       "intensityVigorous": 0,
+      "intensityGoal": 150
+    },
+    {
+      "date": "2026-11-21",
+      "steps": 4093,
+      "stepGoal": 9000,
+      "restingHR": 60,
+      "sleepHours": 7.7,
+      "bedMin": 1374,
+      "wakeMin": 450,
+      "bodyBatteryPeak": 50,
+      "stressAvg": 43,
+      "stressMax": 96,
+      "restMin": 282,
+      "lowMin": 105,
+      "medMin": 46,
+      "highMin": 182,
+      "stressQualifier": "UNKNOWN",
+      "intensityModerate": 10,
+      "intensityVigorous": 3,
       "intensityGoal": 150
     }
   ]
